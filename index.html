@@ -3,56 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiosco Pro - Sincronizado</title>
+    <title>Quiosco Pro - Secure Cloud</title>
     <style>
         :root { --p: #5d2a42; --a: #d4af37; --bg: #f4f6f8; --sidebar-w: 280px; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; min-height: 100vh; overflow-x: hidden; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; min-height: 100vh; }
         
+        /* Sidebar */
         .sidebar { width: var(--sidebar-w); background: white; box-shadow: 2px 0 15px rgba(0,0,0,0.06); display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; z-index: 1000; box-sizing: border-box; overflow-y: auto; }
         .sidebar-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--a); padding-bottom: 10px; }
-        .sidebar-header h1 { font-size: 1.1rem; margin: 0; color: var(--p); letter-spacing: 1px; }
+        .sidebar-header h1 { font-size: 1rem; color: var(--p); margin: 0; letter-spacing: 1px; }
         
-        .seccion { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .seccion { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
         .seccion h3 { font-size: 10px; color: #999; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; }
         
         input, select, button { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; box-sizing: border-box; outline: none; }
         .btn-nav { background: #333; color: white; font-weight: bold; cursor: pointer; border: none; }
-        .btn-arc { background: #666; color: white; border: none; cursor: pointer; }
         .btn-add { background: var(--p); color: white; border: none; cursor: pointer; font-weight: bold; }
         .btn-del { background: #ff7675; color: white; border: none; cursor: pointer; font-size: 10px; padding: 4px 8px; width: auto; margin-left: 10px; border-radius: 4px; }
 
+        /* Main Content */
         .main { flex: 1; margin-left: var(--sidebar-w); padding: 20px; width: calc(100% - var(--sidebar-w)); }
+        #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
         
-        #grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
-        .header-medio { grid-column: 1 / -1; font-size: 1.2rem; color: var(--p); border-left: 4px solid var(--a); padding-left: 12px; margin: 25px 0 12px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: 0 8px 8px 0; }
+        .header-medio { grid-column: 1 / -1; font-size: 1.1rem; color: var(--p); border-left: 4px solid var(--a); padding: 8px 12px; margin: 20px 0 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.5); }
 
-        .card { background: white; border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #eee; display: flex; flex-direction: column; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .card { background: white; border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #eee; display: flex; flex-direction: column; transition: 0.2s; }
         .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
-        .card img { width: 100%; height: 130px; object-fit: cover; background: #f0f0f0; }
+        .card img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
         .card-body { padding: 12px; flex-grow: 1; }
         .card-title { font-size: 0.85rem; font-weight: 700; margin: 0; line-height: 1.3; color: #1a1a1a; }
         
-        .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; transition: 0.2s; }
-        .btn-accion:hover { background: var(--a); color: white; transform: scale(1.1); }
+        .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; }
 
-        @media (max-width: 1400px) { #grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 850px) {
             .sidebar { transform: translateX(-100%); transition: 0.3s; }
             .sidebar.show { transform: translateX(0); }
             .main { margin-left: 0; width: 100%; padding: 15px; }
-            #grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
         }
     </style>
 </head>
 <body>
 
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header"><h1>QUIOSCO CLOUD</h1></div>
+        <div class="sidebar-header"><h1>QUIOSCO SEGURO</h1></div>
         
         <div class="seccion">
-            <h3>Navegación</h3>
+            <h3>Vistas</h3>
             <button class="btn-nav" onclick="window.cambiarVista('ALL')">📰 Muro Principal</button>
-            <button class="btn-arc" onclick="window.cambiarVista('LEIDAS')">👁️ Archivo de Leídas</button>
+            <button class="btn-nav" style="background:#666; margin-top:5px;" onclick="window.cambiarVista('LEIDAS')">👁️ Ver Leídas</button>
         </div>
 
         <div class="seccion">
@@ -62,13 +60,12 @@
         </div>
 
         <div class="seccion">
-            <h3>Añadir Medio</h3>
-            <input type="text" id="in-tema" placeholder="Tema (ej: Semana Santa)">
-            <input type="url" id="in-url" placeholder="URL RSS">
+            <h3>Administración</h3>
+            <input type="password" id="admin-pass" placeholder="Clave Maestra">
+            <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
+            <input type="url" id="in-url" placeholder="URL RSS del periódico">
             <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar en la Nube</button>
         </div>
-        
-        <div style="font-size: 9px; color: #ccc; text-align: center; margin-top: auto;">Firebase Sync v1.0</div>
     </aside>
 
     <main class="main">
@@ -79,11 +76,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURACIÓN PROPORCIONADA POR EL USUARIO
+        // CONFIGURACIÓN FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBkzM8j9-uw8hrDimBF0ez2ER4j54Vk3Ko",
             authDomain: "mi-quiosco-48211.firebaseapp.com",
-            databaseURL: "https://mi-quiosco-48211-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "mi-quiosco-48211",
             storageBucket: "mi-quiosco-48211.firebasestorage.app",
             messagingSenderId: "802592583418",
@@ -107,29 +103,50 @@
         });
 
         window.añadirMedio = async () => {
+            const pass = document.getElementById('admin-pass').value.trim();
             const t = document.getElementById('in-tema').value.trim();
             const u = document.getElementById('in-url').value.trim();
             const btn = document.getElementById('btn-save');
-            if(!t || !u) return;
+
+            if(!pass || !t || !u) return alert("Por favor, rellena la clave, el tema y la URL.");
             
-            btn.innerText = "Conectando...";
+            btn.innerText = "Verificando...";
+            
             try {
+                // 1. Validar el RSS primero
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
+                
                 if(data.status === 'ok') {
-                    await addDoc(colRef, { n: data.feed.title, t: t, u: u, fecha: Date.now() });
+                    // 2. Intentar guardar en Firestore (Aquí es donde Firebase chequea la clave)
+                    await addDoc(colRef, { 
+                        n: data.feed.title, 
+                        t: t, 
+                        u: u, 
+                        pass: pass, 
+                        fecha: Date.now() 
+                    });
+                    
                     document.getElementById('in-url').value = '';
-                    btn.innerText = "+ Guardar en la Nube";
+                    alert("✅ ¡Éxito! Medio añadido y sincronizado.");
+                } else {
+                    alert("❌ La URL no parece un RSS válido.");
                 }
             } catch(e) { 
-                alert("Error: Asegúrate de que es una URL de RSS válida."); 
+                alert("❌ ERROR DE SEGURIDAD: La clave maestra es incorrecta o no tienes permisos.");
+                console.error("Error detallado:", e);
+            } finally {
                 btn.innerText = "+ Guardar en la Nube";
             }
         };
 
         window.borrarMedio = async (id) => {
+            const pass = document.getElementById('admin-pass').value;
+            if(!pass) return alert("Escribe la clave en el cuadro 'Admin' para poder borrar.");
             if(confirm("¿Eliminar este medio de todos tus dispositivos?")) {
-                await deleteDoc(doc(db, "medios", id));
+                try {
+                    await deleteDoc(doc(db, "medios", id));
+                } catch(e) { alert("No tienes permiso para borrar."); }
             }
         };
 
@@ -139,7 +156,6 @@
 
             if (vista === 'LEIDAS') {
                 g.innerHTML = '<div class="header-medio">Noticias Archivadas</div>';
-                if(leidas.length === 0) g.innerHTML += '<p style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">No hay noticias en el archivo.</p>';
                 leidas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
                 return;
             }
@@ -149,8 +165,7 @@
                          fuentes.filter(f => f.u === filtroVal);
 
             if(fuentes.length === 0) {
-                g.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding:100px; color:#999;">Tu quiosco está vacío. Añade un medio en el panel lateral.</p>';
-                return;
+                g.innerHTML = '<p style="grid-column:1/-1; text-align:center; padding:50px; color:#999;">Añade tu primer medio en el panel lateral.</p>';
             }
 
             for (let f of activas) {
@@ -161,7 +176,7 @@
                         g.insertAdjacentHTML('beforeend', `
                             <div class="header-medio">
                                 <span>${f.n} <small style="font-size:10px; color:#999; margin-left:10px;">(${f.t})</small></span>
-                                <button class="btn-del" onclick="window.borrarMedio('${f.id}')">Eliminar</button>
+                                <button class="btn-del" onclick="window.borrarMedio('${f.id}')">Borrar</button>
                             </div>`);
                         
                         const items = data.items.filter(it => !leidas.some(l => l.link === it.link)).slice(0, 10);
@@ -177,13 +192,13 @@
         function renderCard(it, esArchivo) {
             const tSeguro = it.titulo.replace(/['"“”]/g, ' ');
             const boton = esArchivo 
-                ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')" title="Restaurar">↩️</button>`
-                : `<button class="btn-accion" onclick="window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')" title="Marcar como leída">👁️</button>`;
+                ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')">↩️</button>`
+                : `<button class="btn-accion" onclick="window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')">👁️</button>`;
             return `
                 <div class="card">
                     ${boton}
                     <a href="${it.link}" target="_blank" onclick="${!esArchivo ? `window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')` : ''}" style="text-decoration:none; color:inherit;">
-                        ${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:130px; background:#eee"></div>'}
+                        ${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:120px; background:#eee"></div>'}
                         <div class="card-body">
                             <p class="card-title">${it.titulo}</p>
                         </div>
@@ -213,8 +228,8 @@
         function actualizarMenus() {
             const st = document.getElementById('sel-tema');
             const sm = document.getElementById('sel-medio');
-            st.innerHTML = '<option value="">Temas</option>';
-            sm.innerHTML = '<option value="">Medios</option>';
+            st.innerHTML = '<option value="">Filtrar por Tema</option>';
+            sm.innerHTML = '<option value="">Filtrar por Medio</option>';
             [...new Set(fuentes.map(f => f.t))].forEach(t => st.innerHTML += `<option value="${t}">${t}</option>`);
             fuentes.forEach(f => sm.innerHTML += `<option value="${f.u}">${f.n}</option>`);
         }
