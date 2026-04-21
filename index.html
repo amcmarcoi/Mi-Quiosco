@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiosco Pro - Secure Cloud</title>
+    <title>Quiosco Pro - Cloud Archive</title>
     <style>
         :root { --p: #5d2a42; --a: #d4af37; --bg: #f4f6f8; --sidebar-w: 280px; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; min-height: 100vh; }
@@ -33,7 +33,7 @@
         .card img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
         .card-body { padding: 12px; flex-grow: 1; }
         .card-title { font-size: 0.85rem; font-weight: 700; margin: 0; line-height: 1.3; color: #1a1a1a; }
-        .card-meta { font-size: 10px; color: #888; margin-top: 5px; font-style: italic; }
+        .card-meta { font-size: 10px; color: #888; margin-top: 8px; font-style: italic; }
         
         .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; }
 
@@ -51,36 +51,33 @@
         
         <div class="seccion">
             <h3>Vistas</h3>
-            <button class="btn-nav" onclick="window.cambiarVista('ALL')">📰 Muro Principal</button>
+            <button class="btn-nav" onclick="window.cambiarVista('ALL')">📰 Muro RSS</button>
             <button class="btn-nav" style="background:var(--a); margin-top:5px;" onclick="window.cambiarVista('DISCOVER')">🌟 Discover (Excel)</button>
-            <button class="btn-nav" style="background:#666; margin-top:5px;" onclick="window.cambiarVista('LEIDAS')">👁️ Ver Leídas</button>
+            <button class="btn-nav" style="background:#666; margin-top:5px;" onclick="window.cambiarVista('LEIDAS')">👁️ Archivadas</button>
         </div>
 
         <div class="seccion">
-            <h3>Filtros RSS</h3>
-            <select id="sel-tema" onchange="window.filtrarTema()"></select>
-            <select id="sel-medio" onchange="window.filtrarMedio()"></select>
-        </div>
-
-        <div class="seccion">
-            <h3>Administración</h3>
+            <h3>Seguridad</h3>
             <input type="password" id="admin-pass" placeholder="Clave Maestra">
-            
-            <div id="panel-rss">
-                <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
-                <input type="url" id="in-url" placeholder="URL RSS">
-                <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar RSS</button>
-            </div>
+        </div>
 
-            <div id="panel-discover" style="margin-top: 10px; border-top: 1px solid #eee; pt: 10px;">
-                <p style="font-size: 10px; color: #999;">IMPORTAR CSV (DISCOVER)</p>
-                <input type="file" id="csv-file" accept=".csv" style="font-size: 11px;">
-                <button class="btn-csv" onclick="window.importarCSV()">⬆️ Subir Excel</button>
-            </div>
+        <div id="panel-rss" class="seccion">
+            <h3>Añadir RSS</h3>
+            <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
+            <input type="url" id="in-url" placeholder="URL RSS">
+            <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar RSS</button>
+        </div>
+
+        <div id="panel-discover" class="seccion" style="display:none;">
+            <h3>Importar Discover</h3>
+            <input type="file" id="csv-file" accept=".csv">
+            <button class="btn-csv" onclick="window.importarCSV()">⬆️ Subir CSV</button>
         </div>
     </aside>
 
-    <main class="main"><div id="grid"></div></main>
+    <main class="main">
+        <div id="grid"></div>
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -100,100 +97,104 @@
         const colRSS = collection(db, "medios");
         const colDisc = collection(db, "discover");
 
-        let fuentes = [];
+        let fuentesRSS = [];
         let itemsDisc = [];
         let leidas = JSON.parse(localStorage.getItem('q_leidas')) || [];
         let vista = 'ALL';
-        let filtroVal = '';
 
-        // ESCUCHAS EN TIEMPO REAL
+        // Escuchas Firebase
         onSnapshot(query(colRSS, orderBy("fecha", "desc")), (snap) => {
-            fuentes = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            actualizarMenus();
-            if(vista !== 'DISCOVER') cargar();
+            fuentesRSS = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if(vista === 'ALL') cargar();
         });
 
         onSnapshot(query(colDisc, orderBy("importFecha", "desc")), (snap) => {
-            itemsDisc = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            itemsDisc = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if(vista === 'DISCOVER') cargar();
         });
 
-        // --- LÓGICA IMPORTACIÓN EXCEL/CSV ---
+        // --- IMPORTADOR CSV INTELIGENTE ---
         window.importarCSV = () => {
             const pass = document.getElementById('admin-pass').value.trim();
             const file = document.getElementById('csv-file').files[0];
-            if(!pass || !file) return alert("Falta clave o archivo CSV.");
+            if(!pass || !file) return alert("Falta clave o archivo.");
 
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const lineas = e.target.result.split('\n');
-                const encabezados = lineas[0].split(',').map(h => h.trim().toLowerCase());
-                
-                // Mapeo dinámico de columnas según tu archivo
+                const filas = parsearCSV(e.target.result);
+                if (filas.length < 2) return alert("Archivo no válido.");
+
+                const headers = filas[0].map(h => h.trim().toLowerCase());
                 const idx = {
-                    url: encabezados.indexOf('url'),
-                    titulo: encabezados.indexOf('title'),
-                    img: encabezados.indexOf('image'),
-                    medio: encabezados.indexOf('publisher'),
-                    cat: encabezados.indexOf('category')
+                    url: headers.indexOf('url'),
+                    titulo: headers.indexOf('title'),
+                    img: headers.indexOf('image'),
+                    medio: headers.indexOf('publisher'),
+                    cat: headers.indexOf('category')
                 };
 
                 let cont = 0;
-                for(let i = 1; i < lineas.length; i++) {
-                    const col = lineas[i].split(',');
-                    if(col.length < 2) continue;
+                for(let i = 1; i < filas.length; i++) {
+                    const col = filas[i];
+                    if(col.length < 2 || !col[idx.url]) continue;
                     
                     await addDoc(colDisc, {
-                        u: col[idx.url]?.trim() || '#',
+                        u: col[idx.url].trim(),
                         t: col[idx.titulo]?.trim() || 'Sin título',
                         img: col[idx.img]?.trim() || '',
-                        m: col[idx.medio]?.trim() || 'Discover',
+                        m: col[idx.medio]?.trim() || 'Desconocido',
                         cat: col[idx.cat]?.trim() || 'General',
                         pass: pass,
                         importFecha: Date.now()
                     });
                     cont++;
                 }
-                alert(`✅ Se han importado ${cont} noticias a Discover.`);
+                alert(`✅ ${cont} noticias subidas a Discover.`);
             };
-            reader.readAsText(file);
+            reader.readAsText(file, 'UTF-8');
         };
 
-        // --- LÓGICA RSS ---
+        function parsearCSV(texto) {
+            const resultado = [];
+            let fila = [];
+            let valor = "";
+            let enComillas = false;
+            for (let i = 0; i < texto.length; i++) {
+                const char = texto[i];
+                if (char === '"') enComillas = !enComillas;
+                else if (char === ',' && !enComillas) { fila.push(valor); valor = ""; }
+                else if (char === '\n' && !enComillas) { fila.push(valor); resultado.push(fila); fila = []; valor = ""; }
+                else valor += char;
+            }
+            if (fila.length > 0) { fila.push(valor); resultado.push(fila); }
+            return resultado;
+        }
+
+        // --- GESTIÓN RSS ---
         window.añadirMedio = async () => {
             const pass = document.getElementById('admin-pass').value.trim();
             const t = document.getElementById('in-tema').value.trim();
             const u = document.getElementById('in-url').value.trim();
-            if(!pass || !t || !u) return alert("Rellena todos los campos.");
+            if(!pass || !t || !u) return alert("Faltan datos.");
             try {
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
                 if(data.status === 'ok') {
                     await addDoc(colRSS, { n: data.feed.title, t, u, pass, fecha: Date.now() });
-                    alert("✅ Guardado.");
+                    alert("✅ RSS Guardado.");
                 }
-            } catch(e) { alert("Error de clave o RSS."); }
-        };
-
-        window.borrarMedio = async (coleccion, id) => {
-            const pass = document.getElementById('admin-pass').value;
-            if(!pass) return alert("Escribe la clave para borrar.");
-            if(confirm("¿Eliminar permanentemente?")) {
-                try {
-                    await deleteDoc(doc(db, coleccion, id));
-                } catch(e) { alert("Error al borrar."); }
-            }
+            } catch(e) { alert("Error de clave o URL."); }
         };
 
         async function cargar() {
             const g = document.getElementById('grid'); g.innerHTML = '';
-
+            
             if (vista === 'DISCOVER') {
-                g.innerHTML = '<div class="header-medio">🌟 Exploraciones de Discover</div>';
+                g.innerHTML = '<div class="header-medio">🌟 Explorar Discover (Archivo)</div>';
                 itemsDisc.forEach(it => {
                     g.insertAdjacentHTML('beforeend', `
                         <div class="card">
-                            <button class="btn-del" style="position:absolute;top:5px;right:5px;z-index:21" onclick="window.borrarMedio('discover','${it.id}')">×</button>
+                            <button class="btn-del" style="position:absolute;top:5px;right:5px;z-index:30" onclick="window.borrar('discover','${it.id}')">×</button>
                             <a href="${it.u}" target="_blank" style="text-decoration:none;color:inherit;">
                                 ${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:120px;background:#eee"></div>'}
                                 <div class="card-body">
@@ -212,23 +213,16 @@
                 return;
             }
 
-            let activas = (vista === 'ALL') ? fuentes : 
-                          (vista === 'TEMA') ? fuentes.filter(f => f.t === filtroVal) :
-                          fuentes.filter(f => f.u === filtroVal);
-
-            for (let f of activas) {
+            // Vista RSS Principal
+            for (let f of fuentesRSS) {
                 try {
                     const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
                     const data = await res.json();
                     if (data.status === 'ok') {
-                        g.insertAdjacentHTML('beforeend', `
-                            <div class="header-medio">
-                                <span>${f.n} <small style="font-size:10px; color:#999;">(${f.t})</small></span>
-                                <button class="btn-del" onclick="window.borrarMedio('medios','${f.id}')">Borrar</button>
-                            </div>`);
+                        g.insertAdjacentHTML('beforeend', `<div class="header-medio"><span>${f.n}</span><button class="btn-del" onclick="window.borrar('medios','${f.id}')">Borrar</button></div>`);
                         data.items.filter(it => !leidas.some(l => l.link === it.link)).slice(0, 10).forEach(it => {
                             const img = it.thumbnail || (it.enclosure ? it.enclosure.link : '');
-                            g.insertAdjacentHTML('beforeend', renderCard({titulo: it.title, link: it.link, medio: f.n, img: img}, false));
+                            g.insertAdjacentHTML('beforeend', renderCard({titulo: it.title, link: it.link, medio: f.n, img}, false));
                         });
                     }
                 } catch (e) {}
@@ -237,26 +231,14 @@
 
         function renderCard(it, esArchivo) {
             const tSeguro = it.titulo.replace(/['"“”]/g, ' ');
-            const boton = esArchivo 
-                ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')">↩️</button>`
-                : `<button class="btn-accion" onclick="window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')">👁️</button>`;
-            return `
-                <div class="card">
-                    ${boton}
-                    <a href="${it.link}" target="_blank" onclick="${!esArchivo ? `window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')` : ''}" style="text-decoration:none; color:inherit;">
-                        ${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:120px; background:#eee"></div>'}
-                        <div class="card-body">
-                            <p class="card-title">${it.titulo}</p>
-                        </div>
-                    </a>
-                </div>`;
+            const boton = esArchivo ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')">↩️</button>` : `<button class="btn-accion" onclick="window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')">👁️</button>`;
+            return `<div class="card">${boton}<a href="${it.link}" target="_blank" style="text-decoration:none; color:inherit;">${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:120px; background:#eee"></div>'}<div class="card-body"><p class="card-title">${it.titulo}</p></div></a></div>`;
         }
 
         window.archivar = (link, titulo, medio, img) => {
             if (!leidas.some(l => l.link === link)) {
                 leidas.unshift({ link, titulo, medio, img });
-                if(leidas.length > 50) leidas.pop();
-                localStorage.setItem('q_leidas', JSON.stringify(leidas));
+                localStorage.setItem('q_leidas', JSON.stringify(leidas.slice(0,50)));
             }
             cargar();
         };
@@ -267,17 +249,18 @@
             cargar();
         };
 
-        window.cambiarVista = (v) => { vista = v; cargar(); };
-        window.filtrarTema = () => { vista = 'TEMA'; filtroVal = document.getElementById('sel-tema').value; cargar(); };
-        window.filtrarMedio = () => { vista = 'MEDIO'; filtroVal = document.getElementById('sel-medio').value; cargar(); };
+        window.borrar = async (coleccion, id) => {
+            const pass = document.getElementById('admin-pass').value;
+            if(!pass) return alert("Clave necesaria.");
+            if(confirm("¿Eliminar permanentemente?")) await deleteDoc(doc(db, coleccion, id));
+        };
 
-        function actualizarMenus() {
-            const st = document.getElementById('sel-tema'); const sm = document.getElementById('sel-medio');
-            st.innerHTML = '<option value="">Filtrar por Tema</option>';
-            sm.innerHTML = '<option value="">Filtrar por Medio</option>';
-            [...new Set(fuentes.map(f => f.t))].forEach(t => st.innerHTML += `<option value="${t}">${t}</option>`);
-            fuentes.forEach(f => sm.innerHTML += `<option value="${f.u}">${f.n}</option>`);
-        }
+        window.cambiarVista = (v) => { 
+            vista = v; 
+            document.getElementById('panel-rss').style.display = v === 'ALL' ? 'block' : 'none';
+            document.getElementById('panel-discover').style.display = v === 'DISCOVER' ? 'block' : 'none';
+            cargar(); 
+        };
     </script>
 </body>
 </html>
