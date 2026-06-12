@@ -9,7 +9,6 @@
         * { box-sizing: border-box; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; }
 
-        /* ── NAVBAR ── */
         .navbar {
             position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
             background: var(--p); color: white;
@@ -22,25 +21,26 @@
             color: var(--a); margin-right: 20px; white-space: nowrap;
         }
         .nav-links { display: flex; gap: 4px; flex: 1; }
+        .nav-btn, .nav-admin-btn {
+            height: 34px; padding: 0 12px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; font-weight: 600;
+            white-space: nowrap; transition: 0.15s; border: none;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
         .nav-btn {
             background: transparent; color: rgba(255,255,255,0.75);
-            border: none; padding: 8px 14px; border-radius: 6px;
-            cursor: pointer; font-size: 13px; font-weight: 600;
-            white-space: nowrap; transition: 0.15s;
         }
         .nav-btn:hover { background: rgba(255,255,255,0.12); color: white; }
         .nav-btn.active { background: var(--a); color: var(--p); }
 
         .nav-admin-btn {
-            background: rgba(255,255,255,0.1); color: white;
-            border: 1px solid rgba(255,255,255,0.25); padding: 7px 14px;
-            border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
-            white-space: nowrap; margin-left: auto; transition: 0.15s;
+            background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            margin-left: auto;
         }
-        .nav-admin-btn:hover { background: rgba(255,255,255,0.2); }
+        .nav-admin-btn:hover { background: rgba(255,255,255,0.2); color: white; }
         .nav-admin-btn.open { background: white; color: var(--p); }
 
-        /* ── SIDEBAR (solo admin) ── */
         .sidebar {
             position: fixed; top: var(--nav-h); right: 0;
             width: var(--sidebar-w); height: calc(100vh - var(--nav-h));
@@ -56,7 +56,6 @@
         .btn-add { background: var(--p); color: white; border: none; cursor: pointer; font-weight: bold; }
         .btn-del { background: #ff7675; color: white; border: none; cursor: pointer; font-size: 10px; padding: 4px 8px; width: auto; margin-left: 10px; border-radius: 4px; }
 
-        /* Dropdown temas/medios en navbar */
         .nav-dropdown { position: relative; }
         .nav-dropdown-menu {
             display: none; position: absolute; top: calc(100% + 8px); left: 0;
@@ -71,7 +70,6 @@
         .nav-dropdown-menu a:hover { background: var(--bg); color: var(--p); }
         .nav-dropdown-menu a.active { font-weight: bold; color: var(--p); }
 
-        /* ── MAIN ── */
         .main { padding: 20px; padding-top: calc(var(--nav-h) + 20px); }
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 
@@ -85,7 +83,6 @@
 
         .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; }
 
-        /* ── MÓVIL ── */
         .nav-hamburger { display: none; background: none; border: none; color: white; font-size: 22px; cursor: pointer; margin-left: 8px; }
         .nav-links-mobile { display: none; }
 
@@ -103,7 +100,6 @@
 </head>
 <body>
 
-    <!-- NAVBAR -->
     <nav class="navbar" id="navbar">
         <span class="navbar-brand">📰 QUIOSCO</span>
 
@@ -122,7 +118,6 @@
             </div>
         </div>
 
-        <!-- versión móvil duplicada -->
         <div class="nav-links-mobile" id="nav-links-mobile">
             <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
@@ -132,10 +127,9 @@
 
         <div style="position:relative; margin-left:12px;">
             <input type="text" id="buscador" placeholder="🔍 Buscar titular..." oninput="window.buscar()"
-                style="width:200px; padding:7px 12px; border-radius:20px; border:none; background:rgba(255,255,255,0.15);
-                color:white; font-size:13px; outline:none; margin:0;"
-                onfocus="this.style.background='rgba(255,255,255,0.25)'"
-                onblur="this.style.background='rgba(255,255,255,0.15)'">
+                style="width:190px; height:34px; padding:0 32px 0 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:white; font-size:13px; outline:none; margin:0;"
+                onfocus="this.style.background='rgba(255,255,255,0.2)'"
+                onblur="this.style.background='rgba(255,255,255,0.1)'">
             <button id="btn-clear-busqueda" onclick="window.limpiarBusqueda()"
                 style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%);
                 background:none; border:none; color:rgba(255,255,255,0.7); cursor:pointer; font-size:16px;
@@ -146,7 +140,6 @@
         <button class="nav-hamburger" onclick="window.toggleMobile()">☰</button>
     </nav>
 
-    <!-- SIDEBAR ADMIN -->
     <aside class="sidebar" id="sidebar">
         <div class="seccion">
             <h3>Añadir Fuente RSS</h3>
