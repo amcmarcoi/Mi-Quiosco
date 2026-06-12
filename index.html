@@ -89,16 +89,23 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "medios");
+        const leidasRef = collection(db, "leidas");
 
         let fuentes = [];
-        let leidas = JSON.parse(localStorage.getItem('q_leidas')) || [];
+        let leidas = [];
         let vista = 'ALL';
         let filtroVal = '';
 
-        // ESCUCHA EN TIEMPO REAL
+        // ESCUCHA EN TIEMPO REAL - MEDIOS
         onSnapshot(query(colRef, orderBy("fecha", "desc")), (snapshot) => {
             fuentes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             actualizarMenus();
+            cargar();
+        });
+
+        // ESCUCHA EN TIEMPO REAL - LEÍDAS (sincroniza entre navegadores)
+        onSnapshot(leidasRef, (snapshot) => {
+            leidas = snapshot.docs.map(d => ({ ...d.data(), _id: d.id }));
             cargar();
         });
 
@@ -187,7 +194,7 @@
         }
 
         function renderCard(it, esArchivo) {
-            const tSeguro = it.titulo.replace(/['"“”]/g, ' ');
+            const tSeguro = it.titulo.replace(/['"""]/g, ' ');
             const boton = esArchivo 
                 ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')">↩️</button>`
                 : `<button class="btn-accion" onclick="window.archivar('${it.link}', '${tSeguro}', '${it.medio}', '${it.img}')">👁️</button>`;
@@ -203,19 +210,19 @@
                 </div>`;
         }
 
-        window.archivar = (link, titulo, medio, img) => {
+        window.archivar = async (link, titulo, medio, img) => {
             if (!leidas.some(l => l.link === link)) {
-                leidas.unshift({ link, titulo, medio, img });
-                if(leidas.length > 50) leidas.pop();
-                localStorage.setItem('q_leidas', JSON.stringify(leidas));
+                await addDoc(leidasRef, { link, titulo, medio, img, fecha: Date.now() });
+                if (leidas.length >= 50) {
+                    const oldest = leidas.reduce((a, b) => (a.fecha || 0) < (b.fecha || 0) ? a : b);
+                    if (oldest._id) await deleteDoc(doc(db, "leidas", oldest._id));
+                }
             }
-            cargar();
         };
 
-        window.restaurar = (link) => {
-            leidas = leidas.filter(l => l.link !== link);
-            localStorage.setItem('q_leidas', JSON.stringify(leidas));
-            cargar();
+        window.restaurar = async (link) => {
+            const found = leidas.find(l => l.link === link);
+            if (found && found._id) await deleteDoc(doc(db, "leidas", found._id));
         };
 
         window.cambiarVista = (v) => { vista = v; cargar(); };
