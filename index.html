@@ -130,6 +130,18 @@
             <div id="mobile-medios"></div>
         </div>
 
+        <div style="position:relative; margin-left:12px;">
+            <input type="text" id="buscador" placeholder="🔍 Buscar titular..." oninput="window.buscar()"
+                style="width:200px; padding:7px 12px; border-radius:20px; border:none; background:rgba(255,255,255,0.15);
+                color:white; font-size:13px; outline:none; margin:0;"
+                onfocus="this.style.background='rgba(255,255,255,0.25)'"
+                onblur="this.style.background='rgba(255,255,255,0.15)'">
+            <button id="btn-clear-busqueda" onclick="window.limpiarBusqueda()"
+                style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%);
+                background:none; border:none; color:rgba(255,255,255,0.7); cursor:pointer; font-size:16px;
+                padding:0; width:auto; margin:0; line-height:1;">×</button>
+        </div>
+
         <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()">⚙️ Admin</button>
         <button class="nav-hamburger" onclick="window.toggleMobile()">☰</button>
     </nav>
@@ -171,6 +183,7 @@
         let leidas = [];
         let vista = 'ALL';
         let filtroVal = '';
+        let busqueda = '';
 
         onSnapshot(query(colRef, orderBy("fecha", "desc")), (snapshot) => {
             fuentes = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -216,6 +229,19 @@
             const btn = document.getElementById(id);
             if (btn) btn.classList.add('active');
         }
+
+        window.buscar = () => {
+            busqueda = document.getElementById('buscador').value.trim().toLowerCase();
+            document.getElementById('btn-clear-busqueda').style.display = busqueda ? 'block' : 'none';
+            cargar();
+        };
+
+        window.limpiarBusqueda = () => {
+            document.getElementById('buscador').value = '';
+            busqueda = '';
+            document.getElementById('btn-clear-busqueda').style.display = 'none';
+            cargar();
+        };
 
         window.cambiarVista = (v) => {
             vista = v; filtroVal = '';
@@ -345,7 +371,10 @@
                                 <span>${f.n} <small style="font-size:10px;color:#999;margin-left:10px;">(${f.t})</small></span>
                                 <button class="btn-del" onclick="window.borrarMedio('${f.id}')">Borrar</button>
                             </div>`);
-                        const items = data.items.filter(it => !leidas.some(l => l.link === it.link)).slice(0, 10);
+                        const items = data.items
+                            .filter(it => !leidas.some(l => l.link === it.link))
+                            .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
+                            .slice(0, 10);
                         items.forEach(it => {
                             const img = it.thumbnail || (it.enclosure ? it.enclosure.link : '');
                             g.insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img }, false));
@@ -356,14 +385,17 @@
         }
 
         function renderCard(it, esArchivo) {
-            const tSeguro = it.titulo.replace(/['"""]/g, ' ');
+            const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
+            const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
+            const linkSeg = (it.link || '').replace(/'/g, '%27');
+            const medioSeg = (it.medio || '').replace(/['"""\\]/g, ' ');
             const boton = esArchivo
-                ? `<button class="btn-accion" onclick="window.restaurar('${it.link}')">↩️</button>`
-                : `<button class="btn-accion" onclick="window.archivar('${it.link}','${tSeguro}','${it.medio}','${it.img}')">👁️</button>`;
+                ? `<button class="btn-accion" onclick="window.restaurar('${linkSeg}')">↩️</button>`
+                : `<button class="btn-accion" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>`;
             return `
                 <div class="card">
                     ${boton}
-                    <a href="${it.link}" target="_blank" onclick="${!esArchivo ? `window.archivar('${it.link}','${tSeguro}','${it.medio}','${it.img}')` : ''}" style="text-decoration:none;color:inherit;">
+                    <a href="${it.link}" target="_blank" onclick="${!esArchivo ? `window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')` : ''}" style="text-decoration:none;color:inherit;">
                         ${it.img ? `<img src="${it.img}" loading="lazy">` : '<div style="height:120px;background:#eee"></div>'}
                         <div class="card-body"><p class="card-title">${it.titulo}</p></div>
                     </a>
