@@ -128,7 +128,7 @@
         <div style="position:relative; margin-left:12px;">
             <input type="text" id="buscador" placeholder="🔍 Buscar titular..." oninput="window.buscar()"
                 style="width:190px; height:34px; padding:0 32px 0 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:white; font-size:13px; outline:none; margin:0;"
-                onfocus="this.style.background='rgba(255,255,255,0.2)'"
+                onfocus="this.style.background='rgba(255,255,255,0.25)'"
                 onblur="this.style.background='rgba(255,255,255,0.1)'">
             <button id="btn-clear-busqueda" onclick="window.limpiarBusqueda()"
                 style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%);
@@ -340,8 +340,16 @@
             g.innerHTML = '';
 
             if (vista === 'LEIDAS') {
-                g.innerHTML = '<div class="header-medio">Noticias Archivadas</div>';
-                leidas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
+                const filtradas = leidas.filter(it =>
+                    !busqueda || (it.titulo || '').toLowerCase().includes(busqueda)
+                );
+                g.innerHTML = '<div class="header-medio">Noticias Archivadas' +
+                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') +
+                    '</div>';
+                filtradas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
+                if (filtradas.length === 0) {
+                    g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>');
+                }
                 return;
             }
 
