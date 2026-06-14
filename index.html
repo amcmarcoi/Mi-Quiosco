@@ -160,12 +160,14 @@
 
         onSnapshot(query(colRef, orderBy("fecha", "desc")), (snapshot) => {
             fuentes = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-            actualizarMenus(); cargar();
+            actualizarMenus();
+            cargar();
         });
 
         onSnapshot(ordenDoc, (snap) => {
             ordenIds = snap.exists() ? (snap.data().ids || []) : [];
-            actualizarMenus(); cargar();
+            actualizarMenus();
+            cargar();
         });
 
         onSnapshot(leidasRef, (snapshot) => {
@@ -298,14 +300,18 @@
             }
         };
 
+        let cargaToken = 0;
+
         async function cargar() {
+            const miToken = ++cargaToken;
             const g = document.getElementById('grid');
             g.innerHTML = '';
 
             if (vista === 'LEIDAS') {
                 const filtradas = leidas.filter(it => !busqueda || (it.titulo || '').toLowerCase().includes(busqueda));
                 g.innerHTML = '<div class="header-medio">Noticias Archivadas' +
-                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') + '</div>';
+                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') +
+                    '</div>';
                 filtradas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
                 if (filtradas.length === 0)
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>');
@@ -313,34 +319,47 @@
             }
 
             const ord = fuentesOrdenadas();
-            const activas = vista === 'ALL' ? ord : vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) : ord.filter(f => f.u === filtroVal);
+            let activas = vista === 'ALL' ? ord :
+                          vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) :
+                          ord.filter(f => f.u === filtroVal);
 
             if (fuentes.length === 0) {
                 g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:50px;color:#999;">Añade un RSS para empezar.</p>';
                 return;
             }
 
-            for (let f of activas) {
+            // 1) Creamos los contenedores en orden ANTES de los fetch, para fijar la posición
+            const secciones = {};
+            activas.forEach(f => {
+                const sec = document.createElement('div');
+                sec.style.display = 'contents';
+                sec.innerHTML = `
+                    <div class="header-medio">
+                        <span>${f.n} <small style="font-size:10px;color:#999;margin-left:10px;">(${f.t})</small></span>
+                        <button class="btn-del" onclick="window.borrarMedio('${f.id}')">Borrar</button>
+                    </div>`;
+                g.appendChild(sec);
+                secciones[f.id] = sec;
+            });
+
+            // 2) Rellenamos cada sección a medida que llegan los datos (en paralelo)
+            await Promise.all(activas.map(async f => {
                 try {
                     const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
                     const data = await res.json();
+                    if (miToken !== cargaToken) return; // carga obsoleta, abortar
                     if (data.status === 'ok') {
-                        g.insertAdjacentHTML('beforeend', `
-                            <div class="header-medio">
-                                <span>${f.n} <small style="font-size:10px;color:#999;margin-left:10px;">(${f.t})</small></span>
-                                <button class="btn-del" onclick="window.borrarMedio('${f.id}')">Borrar</button>
-                            </div>`);
                         const items = data.items
                             .filter(it => !leidas.some(l => l.link === it.link))
                             .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
                             .slice(0, 10);
                         items.forEach(it => {
                             const img = it.thumbnail || (it.enclosure ? it.enclosure.link : '');
-                            g.insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img }, false));
+                            secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img }, false));
                         });
                     }
                 } catch(e) {}
-            }
+            }));
         }
 
         function renderCard(it, esArchivo) {
