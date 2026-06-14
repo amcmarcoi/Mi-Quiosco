@@ -13,13 +13,9 @@
             position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
             background: var(--p); color: white;
             display: flex; align-items: center; padding: 0 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 2000;
-            gap: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 2000; gap: 8px;
         }
-        .navbar-brand {
-            font-weight: 900; font-size: 1rem; letter-spacing: 2px;
-            color: var(--a); margin-right: 20px; white-space: nowrap;
-        }
+        .navbar-brand { font-weight: 900; font-size: 1rem; letter-spacing: 2px; color: var(--a); margin-right: 20px; white-space: nowrap; }
         .nav-links { display: flex; gap: 4px; flex: 1; }
         .nav-btn, .nav-admin-btn {
             height: 34px; padding: 0 12px; border-radius: 6px;
@@ -27,17 +23,10 @@
             white-space: nowrap; transition: 0.15s; border: none;
             display: inline-flex; align-items: center; gap: 5px;
         }
-        .nav-btn {
-            background: transparent; color: rgba(255,255,255,0.75);
-        }
+        .nav-btn { background: transparent; color: rgba(255,255,255,0.75); }
         .nav-btn:hover { background: rgba(255,255,255,0.12); color: white; }
         .nav-btn.active { background: var(--a); color: var(--p); }
-
-        .nav-admin-btn {
-            background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
-            border: 1px solid rgba(255,255,255,0.2) !important;
-            margin-left: auto;
-        }
+        .nav-admin-btn { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.2) !important; margin-left: auto; }
         .nav-admin-btn:hover { background: rgba(255,255,255,0.2); color: white; }
         .nav-admin-btn.open { background: white; color: var(--p); }
 
@@ -49,7 +38,6 @@
             transform: translateX(100%); transition: transform 0.3s;
         }
         .sidebar.show { transform: translateX(0); }
-
         .seccion { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
         .seccion h3 { font-size: 10px; color: #999; text-transform: uppercase; margin: 0 0 10px; letter-spacing: 1px; }
         input, select, button { width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; outline: none; }
@@ -57,22 +45,14 @@
         .btn-del { background: #ff7675; color: white; border: none; cursor: pointer; font-size: 10px; padding: 4px 8px; width: auto; margin-left: 10px; border-radius: 4px; }
 
         .nav-dropdown { position: relative; }
-        .nav-dropdown-menu {
-            display: none; position: absolute; top: calc(100% + 8px); left: 0;
-            background: white; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            min-width: 180px; z-index: 3000; overflow: hidden;
-        }
+        .nav-dropdown-menu { display: none; position: absolute; top: calc(100% + 8px); left: 0; background: white; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); min-width: 180px; z-index: 3000; overflow: hidden; }
         .nav-dropdown-menu.show { display: block; }
-        .nav-dropdown-menu a {
-            display: block; padding: 10px 16px; font-size: 13px; color: #333;
-            text-decoration: none; cursor: pointer;
-        }
+        .nav-dropdown-menu a { display: block; padding: 10px 16px; font-size: 13px; color: #333; text-decoration: none; cursor: pointer; }
         .nav-dropdown-menu a:hover { background: var(--bg); color: var(--p); }
         .nav-dropdown-menu a.active { font-weight: bold; color: var(--p); }
 
         .main { padding: 20px; padding-top: calc(var(--nav-h) + 20px); }
         #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-
         .header-medio { grid-column: 1 / -1; font-size: 1.1rem; color: var(--p); border-left: 4px solid var(--a); padding: 8px 12px; margin: 20px 0 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.5); border-radius: 0 6px 6px 0; }
 
         .card { background: white; border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #eee; display: flex; flex-direction: column; transition: 0.2s; }
@@ -80,20 +60,19 @@
         .card img { width: 100%; height: 120px; object-fit: cover; background: #eee; }
         .card-body { padding: 12px; flex-grow: 1; }
         .card-title { font-size: 0.85rem; font-weight: 700; margin: 0; line-height: 1.3; color: #1a1a1a; }
-
         .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; }
+
+        .orden-item { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 6px; margin-bottom: 4px; background: #f9f9f9; border: 1px solid #eee; cursor: grab; user-select: none; }
+        .orden-item:active { cursor: grabbing; }
+        .orden-handle { font-size: 18px; color: #ccc; line-height: 1; flex-shrink: 0; }
+        .orden-nombre { flex: 1; font-size: 13px; font-weight: 600; color: #333; }
 
         .nav-hamburger { display: none; background: none; border: none; color: white; font-size: 22px; cursor: pointer; margin-left: 8px; }
         .nav-links-mobile { display: none; }
-
         @media (max-width: 750px) {
             .nav-links { display: none; }
             .nav-hamburger { display: block; }
-            .navbar.mobile-open .nav-links-mobile {
-                display: flex; flex-direction: column; position: fixed;
-                top: var(--nav-h); left: 0; right: 0;
-                background: var(--p); padding: 10px; gap: 4px; z-index: 1900;
-            }
+            .navbar.mobile-open .nav-links-mobile { display: flex; flex-direction: column; position: fixed; top: var(--nav-h); left: 0; right: 0; background: var(--p); padding: 10px; gap: 4px; z-index: 1900; }
             .nav-links-mobile .nav-btn { text-align: left; color: rgba(255,255,255,0.85); }
         }
     </style>
@@ -102,40 +81,32 @@
 
     <nav class="navbar" id="navbar">
         <span class="navbar-brand">📰 QUIOSCO</span>
-
         <div class="nav-links" id="nav-links">
             <button class="nav-btn active" id="btn-all" onclick="window.cambiarVista('ALL')">🏠 Principal</button>
             <button class="nav-btn" id="btn-leidas" onclick="window.cambiarVista('LEIDAS')">👁️ Leídas</button>
-
             <div class="nav-dropdown" id="dd-temas">
                 <button class="nav-btn" id="btn-temas" onclick="window.toggleDropdown('temas')">🏷️ Temas ▾</button>
                 <div class="nav-dropdown-menu" id="menu-temas"></div>
             </div>
-
             <div class="nav-dropdown" id="dd-medios">
                 <button class="nav-btn" id="btn-medios" onclick="window.toggleDropdown('medios')">📺 Medios ▾</button>
                 <div class="nav-dropdown-menu" id="menu-medios"></div>
             </div>
         </div>
-
         <div class="nav-links-mobile" id="nav-links-mobile">
             <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
             <div id="mobile-temas"></div>
             <div id="mobile-medios"></div>
         </div>
-
         <div style="position:relative; margin-left:12px;">
             <input type="text" id="buscador" placeholder="🔍 Buscar titular..." oninput="window.buscar()"
                 style="width:190px; height:34px; padding:0 32px 0 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:white; font-size:13px; outline:none; margin:0;"
                 onfocus="this.style.background='rgba(255,255,255,0.25)'"
                 onblur="this.style.background='rgba(255,255,255,0.1)'">
             <button id="btn-clear-busqueda" onclick="window.limpiarBusqueda()"
-                style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%);
-                background:none; border:none; color:rgba(255,255,255,0.7); cursor:pointer; font-size:16px;
-                padding:0; width:auto; margin:0; line-height:1;">×</button>
+                style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.7); cursor:pointer; font-size:16px; padding:0; width:auto; margin:0; line-height:1;">×</button>
         </div>
-
         <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()">⚙️ Admin</button>
         <button class="nav-hamburger" onclick="window.toggleMobile()">☰</button>
     </nav>
@@ -148,6 +119,10 @@
             <input type="url" id="in-url" placeholder="URL RSS del periódico">
             <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar en la Nube</button>
         </div>
+        <div class="seccion">
+            <h3>Ordenar Medios (arrastrar)</h3>
+            <div id="lista-orden"></div>
+        </div>
     </aside>
 
     <main class="main">
@@ -156,7 +131,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBkzM8j9-uw8hrDimBF0ez2ER4j54Vk3Ko",
@@ -171,17 +146,26 @@
         const db = getFirestore(app);
         const colRef = collection(db, "medios");
         const leidasRef = collection(db, "leidas");
+        const ordenDoc = doc(db, "config", "orden");
 
-        let fuentes = [];
-        let leidas = [];
-        let vista = 'ALL';
-        let filtroVal = '';
-        let busqueda = '';
+        let fuentes = [], leidas = [], ordenIds = [], vista = 'ALL', filtroVal = '', busqueda = '';
+
+        function fuentesOrdenadas() {
+            if (ordenIds.length === 0) return fuentes;
+            const map = Object.fromEntries(fuentes.map(f => [f.id, f]));
+            const ordenadas = ordenIds.map(id => map[id]).filter(Boolean);
+            const resto = fuentes.filter(f => !ordenIds.includes(f.id));
+            return [...ordenadas, ...resto];
+        }
 
         onSnapshot(query(colRef, orderBy("fecha", "desc")), (snapshot) => {
             fuentes = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-            actualizarMenus();
-            cargar();
+            actualizarMenus(); cargar();
+        });
+
+        onSnapshot(ordenDoc, (snap) => {
+            ordenIds = snap.exists() ? (snap.data().ids || []) : [];
+            actualizarMenus(); cargar();
         });
 
         onSnapshot(leidasRef, (snapshot) => {
@@ -190,9 +174,8 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.nav-dropdown')) {
+            if (!e.target.closest('.nav-dropdown'))
                 document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('show'));
-            }
         });
 
         window.toggleDropdown = (tipo) => {
@@ -201,21 +184,12 @@
             otras.classList.remove('show');
             menu.classList.toggle('show');
         };
-
         window.toggleAdmin = () => {
-            const sb = document.getElementById('sidebar');
-            const btn = document.getElementById('btn-admin');
-            sb.classList.toggle('show');
-            btn.classList.toggle('open');
+            document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('btn-admin').classList.toggle('open');
         };
-
-        window.toggleMobile = () => {
-            document.getElementById('navbar').classList.toggle('mobile-open');
-        };
-
-        window.closeMobile = () => {
-            document.getElementById('navbar').classList.remove('mobile-open');
-        };
+        window.toggleMobile = () => document.getElementById('navbar').classList.toggle('mobile-open');
+        window.closeMobile = () => document.getElementById('navbar').classList.remove('mobile-open');
 
         function setNavActivo(id) {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -228,75 +202,72 @@
             document.getElementById('btn-clear-busqueda').style.display = busqueda ? 'block' : 'none';
             cargar();
         };
-
         window.limpiarBusqueda = () => {
             document.getElementById('buscador').value = '';
             busqueda = '';
             document.getElementById('btn-clear-busqueda').style.display = 'none';
             cargar();
         };
-
         window.cambiarVista = (v) => {
             vista = v; filtroVal = '';
-            const mapa = { ALL: 'btn-all', LEIDAS: 'btn-leidas' };
-            setNavActivo(mapa[v] || '');
+            setNavActivo({ ALL: 'btn-all', LEIDAS: 'btn-leidas' }[v] || '');
             document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('show'));
             cargar();
         };
-
         window.filtrarTema = (val) => {
             vista = 'TEMA'; filtroVal = val;
             setNavActivo('btn-temas');
             document.getElementById('menu-temas').classList.remove('show');
-            actualizarMenusActivo();
-            cargar();
+            actualizarMenusActivo(); cargar();
         };
-
         window.filtrarMedio = (val) => {
             vista = 'MEDIO'; filtroVal = val;
             setNavActivo('btn-medios');
             document.getElementById('menu-medios').classList.remove('show');
-            actualizarMenusActivo();
-            cargar();
+            actualizarMenusActivo(); cargar();
         };
 
         function actualizarMenus() {
-            const temas = [...new Set(fuentes.map(f => f.t))];
-            const menuT = document.getElementById('menu-temas');
-            const menuM = document.getElementById('menu-medios');
-            const mobileT = document.getElementById('mobile-temas');
-            const mobileM = document.getElementById('mobile-medios');
-
-            menuT.innerHTML = temas.map(t =>
-                `<a onclick="window.filtrarTema('${t}')">${t}</a>`
-            ).join('');
-
-            menuM.innerHTML = fuentes.map(f =>
-                `<a onclick="window.filtrarMedio('${f.u}')">${f.n}</a>`
-            ).join('');
-
-            mobileT.innerHTML = temas.map(t =>
-                `<button class="nav-btn" onclick="window.filtrarTema('${t}'); closeMobile()">🏷️ ${t}</button>`
-            ).join('');
-
-            mobileM.innerHTML = fuentes.map(f =>
-                `<button class="nav-btn" onclick="window.filtrarMedio('${f.u}'); closeMobile()">📺 ${f.n}</button>`
-            ).join('');
-
+            const ord = fuentesOrdenadas();
+            const temas = [...new Set(ord.map(f => f.t))];
+            document.getElementById('menu-temas').innerHTML = temas.map(t => `<a onclick="window.filtrarTema('${t}')">${t}</a>`).join('');
+            document.getElementById('menu-medios').innerHTML = ord.map(f => `<a onclick="window.filtrarMedio('${f.u}')">${f.n}</a>`).join('');
+            document.getElementById('mobile-temas').innerHTML = temas.map(t => `<button class="nav-btn" onclick="window.filtrarTema('${t}'); closeMobile()">${t}</button>`).join('');
+            document.getElementById('mobile-medios').innerHTML = ord.map(f => `<button class="nav-btn" onclick="window.filtrarMedio('${f.u}'); closeMobile()">${f.n}</button>`).join('');
             actualizarMenusActivo();
+            renderListaOrden();
+        }
+
+        function renderListaOrden() {
+            const lista = document.getElementById('lista-orden');
+            if (!lista) return;
+            const ord = fuentesOrdenadas();
+            lista.innerHTML = ord.map(f => `
+                <div class="orden-item" draggable="true" data-id="${f.id}">
+                    <span class="orden-handle">⠿</span>
+                    <span class="orden-nombre">${f.n} <small style="color:#bbb;font-size:10px;">${f.t}</small></span>
+                    <button class="btn-del" onclick="window.borrarMedio('${f.id}')">✕</button>
+                </div>`).join('');
+            let dragEl = null;
+            lista.querySelectorAll('.orden-item').forEach(item => {
+                item.addEventListener('dragstart', () => { dragEl = item; setTimeout(() => item.style.opacity = '0.4', 0); });
+                item.addEventListener('dragend', () => {
+                    item.style.opacity = '';
+                    const ids = [...lista.querySelectorAll('.orden-item')].map(el => el.dataset.id);
+                    setDoc(ordenDoc, { ids });
+                });
+                item.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const rect = item.getBoundingClientRect();
+                    lista.insertBefore(dragEl, e.clientY > rect.top + rect.height / 2 ? item.nextSibling : item);
+                });
+            });
         }
 
         function actualizarMenusActivo() {
             document.querySelectorAll('#menu-temas a, #menu-medios a').forEach(a => a.classList.remove('active'));
-            if (vista === 'TEMA') {
-                document.querySelectorAll('#menu-temas a').forEach(a => {
-                    if (a.textContent === filtroVal) a.classList.add('active');
-                });
-            } else if (vista === 'MEDIO') {
-                document.querySelectorAll('#menu-medios a').forEach(a => {
-                    if (a.getAttribute('onclick').includes(filtroVal)) a.classList.add('active');
-                });
-            }
+            if (vista === 'TEMA') document.querySelectorAll('#menu-temas a').forEach(a => { if (a.textContent === filtroVal) a.classList.add('active'); });
+            if (vista === 'MEDIO') document.querySelectorAll('#menu-medios a').forEach(a => { if (a.getAttribute('onclick').includes(filtroVal)) a.classList.add('active'); });
         }
 
         window.añadirMedio = async () => {
@@ -304,10 +275,8 @@
             const t = document.getElementById('in-tema').value.trim();
             const u = document.getElementById('in-url').value.trim();
             const btn = document.getElementById('btn-save');
-
             if (!pass || !t || !u) return alert("Por favor, rellena la clave, el tema y la URL.");
             btn.innerText = "Verificando...";
-
             try {
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
@@ -315,23 +284,17 @@
                     await addDoc(colRef, { n: data.feed.title, t, u, pass, fecha: Date.now() });
                     document.getElementById('in-url').value = '';
                     alert("✅ ¡Éxito! Medio añadido.");
-                } else {
-                    alert("❌ La URL no parece un RSS válido.");
-                }
-            } catch(e) {
-                alert("❌ ERROR: Clave incorrecta o fallo de conexión.");
-            } finally {
-                btn.innerText = "+ Guardar en la Nube";
-            }
+                } else { alert("❌ La URL no parece un RSS válido."); }
+            } catch(e) { alert("❌ ERROR: Clave incorrecta o fallo de conexión."); }
+            finally { btn.innerText = "+ Guardar en la Nube"; }
         };
 
         window.borrarMedio = async (id) => {
             const pass = document.getElementById('admin-pass').value;
             if (!pass) return alert("Escribe la clave para poder borrar.");
             if (confirm("¿Eliminar este medio?")) {
-                try {
-                    await deleteDoc(doc(db, "medios", id));
-                } catch(e) { alert("No tienes permiso."); }
+                try { await deleteDoc(doc(db, "medios", id)); }
+                catch(e) { alert("No tienes permiso."); }
             }
         };
 
@@ -340,22 +303,17 @@
             g.innerHTML = '';
 
             if (vista === 'LEIDAS') {
-                const filtradas = leidas.filter(it =>
-                    !busqueda || (it.titulo || '').toLowerCase().includes(busqueda)
-                );
+                const filtradas = leidas.filter(it => !busqueda || (it.titulo || '').toLowerCase().includes(busqueda));
                 g.innerHTML = '<div class="header-medio">Noticias Archivadas' +
-                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') +
-                    '</div>';
+                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') + '</div>';
                 filtradas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
-                if (filtradas.length === 0) {
+                if (filtradas.length === 0)
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>');
-                }
                 return;
             }
 
-            let activas = vista === 'ALL' ? fuentes :
-                          vista === 'TEMA' ? fuentes.filter(f => f.t === filtroVal) :
-                          fuentes.filter(f => f.u === filtroVal);
+            const ord = fuentesOrdenadas();
+            const activas = vista === 'ALL' ? ord : vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) : ord.filter(f => f.u === filtroVal);
 
             if (fuentes.length === 0) {
                 g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:50px;color:#999;">Añade un RSS para empezar.</p>';
