@@ -37,7 +37,7 @@
         .nav-admin-btn {
             background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
             border: 1px solid rgba(255,255,255,0.2) !important;
-            margin-left: auto; padding: 0 10px;
+            margin-left: auto;
         }
         .nav-admin-btn:hover { background: rgba(255,255,255,0.2); color: white; }
         .nav-admin-btn.open { background: white; color: var(--p); }
@@ -159,10 +159,10 @@
     <!-- SIDEBAR ADMIN -->
     <aside class="sidebar" id="sidebar">
         <div class="seccion">
-            <h3>Añadir Fuente (RSS o Sitemap)</h3>
+            <h3>Añadir Fuente RSS</h3>
             <input type="password" id="admin-pass" placeholder="Clave Maestra">
             <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
-            <input type="url" id="in-url" placeholder="URL RSS o sitemap.news del periódico">
+            <input type="url" id="in-url" placeholder="URL RSS o Sitemap del periódico">
             <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar en la Nube</button>
         </div>
         <div class="seccion">
@@ -349,7 +349,7 @@
             lista.innerHTML = ord.map(f => `
                 <div class="orden-item" draggable="true" data-id="${f.id}">
                     <span class="orden-handle">⠿</span>
-                    <span class="orden-nombre">${f.n} <small style="color:#bbb;font-size:10px;">${f.t}${f.tipo === 'sitemap' ? ' · sitemap' : ''}</small></span>
+                    <span class="orden-nombre">${f.n} <small style="color:#bbb;font-size:10px;">${f.t}</small></span>
                     <button class="btn-del" onclick="window.borrarMedio('${f.id}')">✕</button>
                 </div>`).join('');
             let dragEl = null;
@@ -400,9 +400,29 @@
             }).filter(x => x.link);
         }
 
+        // Lista de proxies CORS de respaldo (se prueban en orden)
+        const CORS_PROXIES = [
+            u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+            u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+            u => `https://thingproxy.freeboard.io/fetch/${u}`,
+        ];
+
+        async function fetchConProxy(u) {
+            let ultimoError = null;
+            for (const proxy of CORS_PROXIES) {
+                try {
+                    const res = await fetch(proxy(u));
+                    if (!res.ok) { ultimoError = `HTTP ${res.status}`; continue; }
+                    const txt = await res.text();
+                    if (txt && txt.length > 50) return txt;
+                    ultimoError = 'respuesta vacía';
+                } catch(e) { ultimoError = e.message; }
+            }
+            throw new Error(ultimoError || 'todos los proxies fallaron');
+        }
+
         async function fetchSitemap(u) {
-            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
-            const txt = await res.text();
+            const txt = await fetchConProxy(u);
             return parseSitemap(txt);
         }
 
@@ -415,28 +435,32 @@
             if (!pass || !t || !u) return alert("Por favor, rellena la clave, el tema y la URL.");
             btn.innerText = "Verificando...";
 
+            // 1) Intentamos como RSS (su fallo NO impide probar el sitemap)
             try {
-                // 1) Intentamos como RSS
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
                 if (data.status === 'ok') {
                     await addDoc(colRef, { n: data.feed.title, t, u, pass, tipo: 'rss', fecha: Date.now() });
                     document.getElementById('in-url').value = '';
+                    btn.innerText = "+ Guardar en la Nube";
                     alert("✅ ¡Éxito! Medio RSS añadido.");
                     return;
                 }
-                // 2) Si no es RSS, probamos como sitemap de noticias
-                btn.innerText = "Probando sitemap...";
+            } catch(e) { /* no es RSS válido, probamos sitemap */ }
+
+            // 2) Probamos como sitemap de noticias
+            btn.innerText = "Probando sitemap...";
+            try {
                 const items = await fetchSitemap(u);
                 if (items.length > 0) {
                     await addDoc(colRef, { n: nombreDesdeUrl(u), t, u, pass, tipo: 'sitemap', fecha: Date.now() });
                     document.getElementById('in-url').value = '';
                     alert(`✅ ¡Éxito! Sitemap añadido (${items.length} noticias).`);
                 } else {
-                    alert("❌ La URL no parece un RSS ni un sitemap de noticias válido.");
+                    alert("❌ Se descargó la URL pero no contiene noticias en formato sitemap/RSS reconocible.");
                 }
             } catch(e) {
-                alert("❌ ERROR: fallo de conexión o formato no válido.");
+                alert("❌ No se pudo descargar la URL (" + e.message + "). Puede ser un fallo temporal del proxy; inténtalo de nuevo.");
             } finally {
                 btn.innerText = "+ Guardar en la Nube";
             }
@@ -528,6 +552,9 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
+                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
+                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
+                        const linkSeg = (it.url || '').replace(/'/g, '%27');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
                             <div class="card" style="opacity:0.75;">
@@ -562,7 +589,7 @@
                           vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) :
                           ord.filter(f => f.u === filtroVal);
 
-            // Artículos manuales (siempre al principio en ALL y TEMA)
+            // Artículos manuales (siempre al principio en ALL)
             if (vista === 'ALL' || vista === 'TEMA') {
                 const artFiltrados = articulosManuales
                     .filter(a => !leidas.some(l => l.link === a.url))
