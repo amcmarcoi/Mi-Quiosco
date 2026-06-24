@@ -556,6 +556,8 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
+                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
+                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
                         const linkSeg = (it.url || '').replace(/'/g, '%27');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
@@ -576,12 +578,29 @@
                 const filtradas = leidas.filter(it =>
                     !busqueda || (it.titulo || '').toLowerCase().includes(busqueda)
                 );
-                g.innerHTML = '<div class="header-medio">Noticias Archivadas' +
-                    (busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '') +
-                    '</div>';
-                filtradas.forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
+                g.innerHTML = '';
                 if (filtradas.length === 0) {
-                    g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>');
+                    g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>';
+                    return;
+                }
+                // Agrupar por tema buscando el medio en fuentes
+                const temaMap = {};
+                for (const it of filtradas) {
+                    const fuente = fuentes.find(f => f.n === it.medio);
+                    const tema = fuente ? (fuente.t || 'Otros') : 'Otros';
+                    if (!temaMap[tema]) temaMap[tema] = [];
+                    temaMap[tema].push(it);
+                }
+                // Ordenar temas igual que en vista principal (por orden de fuentes)
+                const temasOrdenados = [...new Set(fuentesOrdenadas().map(f => f.t || 'Otros'))];
+                Object.keys(temaMap).forEach(t => { if (!temasOrdenados.includes(t)) temasOrdenados.push(t); });
+                for (const tema of temasOrdenados) {
+                    if (!temaMap[tema]) continue;
+                    const label = busqueda
+                        ? `${tema} <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>`
+                        : tema;
+                    g.insertAdjacentHTML('beforeend', `<div class="header-medio" style="grid-column:1/-1;">${label}</div>`);
+                    temaMap[tema].forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
                 }
                 return;
             }
