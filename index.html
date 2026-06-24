@@ -37,7 +37,7 @@
         .nav-admin-btn {
             background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
             border: 1px solid rgba(255,255,255,0.2) !important;
-            margin-left: auto;
+            margin-left: auto; padding: 0 10px;
         }
         .nav-admin-btn:hover { background: rgba(255,255,255,0.2); color: white; }
         .nav-admin-btn.open { background: white; color: var(--p); }
@@ -117,7 +117,6 @@
         <div class="nav-links" id="nav-links">
             <button class="nav-btn active" id="btn-all" onclick="window.cambiarVista('ALL')">🏠 Principal</button>
             <button class="nav-btn" id="btn-leidas" onclick="window.cambiarVista('LEIDAS')">👁️ Leídas</button>
-            <button class="nav-btn" id="btn-papelera" onclick="window.cambiarVista('PAPELERA')">🗑️ Papelera <span id="badge-papelera" style="display:none;background:#ff7675;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
 
             <div class="nav-dropdown" id="dd-temas">
                 <button class="nav-btn" id="btn-temas" onclick="window.toggleDropdown('temas')">🏷️ Temas ▾</button>
@@ -128,15 +127,17 @@
                 <button class="nav-btn" id="btn-medios" onclick="window.toggleDropdown('medios')">📺 Medios ▾</button>
                 <div class="nav-dropdown-menu" id="menu-medios"></div>
             </div>
+
+            <button class="nav-btn" id="btn-papelera" onclick="window.cambiarVista('PAPELERA')">🗑️ Papelera <span id="badge-papelera" style="display:none;background:#ff7675;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
         </div>
 
         <!-- versión móvil duplicada -->
         <div class="nav-links-mobile" id="nav-links-mobile">
             <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
-            <button class="nav-btn" onclick="window.cambiarVista('PAPELERA'); closeMobile()">🗑️ Papelera</button>
             <div id="mobile-temas"></div>
             <div id="mobile-medios"></div>
+            <button class="nav-btn" onclick="window.cambiarVista('PAPELERA'); closeMobile()">🗑️ Papelera</button>
         </div>
 
         <div style="position:relative; margin-left:12px;">
@@ -151,17 +152,17 @@
                 padding:0; width:auto; margin:0; line-height:1;">×</button>
         </div>
 
-        <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()">⚙️ Admin</button>
+        <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()" title="Admin">⚙️</button>
         <button class="nav-hamburger" onclick="window.toggleMobile()">☰</button>
     </nav>
 
     <!-- SIDEBAR ADMIN -->
     <aside class="sidebar" id="sidebar">
         <div class="seccion">
-            <h3>Añadir Fuente RSS</h3>
+            <h3>Añadir Fuente (RSS o Sitemap)</h3>
             <input type="password" id="admin-pass" placeholder="Clave Maestra">
             <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
-            <input type="url" id="in-url" placeholder="URL RSS del periódico">
+            <input type="url" id="in-url" placeholder="URL RSS o sitemap.news del periódico">
             <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar en la Nube</button>
         </div>
         <div class="seccion">
@@ -348,7 +349,7 @@
             lista.innerHTML = ord.map(f => `
                 <div class="orden-item" draggable="true" data-id="${f.id}">
                     <span class="orden-handle">⠿</span>
-                    <span class="orden-nombre">${f.n} <small style="color:#bbb;font-size:10px;">${f.t}</small></span>
+                    <span class="orden-nombre">${f.n} <small style="color:#bbb;font-size:10px;">${f.t}${f.tipo === 'sitemap' ? ' · sitemap' : ''}</small></span>
                     <button class="btn-del" onclick="window.borrarMedio('${f.id}')">✕</button>
                 </div>`).join('');
             let dragEl = null;
@@ -380,6 +381,31 @@
             }
         }
 
+        // ── Sitemap de noticias (Google News sitemap) ──
+        function nombreDesdeUrl(u) {
+            try { return new URL(u).hostname.replace(/^www\./, ''); } catch(e) { return u; }
+        }
+
+        function parseSitemap(xmlText) {
+            const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+            const urls = [...xml.getElementsByTagName('url')];
+            return urls.map(u => {
+                const loc = u.getElementsByTagName('loc')[0]?.textContent?.trim() || '';
+                let titulo = '', img = '';
+                for (const el of u.getElementsByTagName('*')) {
+                    if (el.localName === 'title' && !titulo) titulo = el.textContent.trim();
+                    if (el.localName === 'loc' && el.parentNode?.localName === 'image' && !img) img = el.textContent.trim();
+                }
+                return { link: loc, title: titulo || loc, img };
+            }).filter(x => x.link);
+        }
+
+        async function fetchSitemap(u) {
+            const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`);
+            const txt = await res.text();
+            return parseSitemap(txt);
+        }
+
         window.añadirMedio = async () => {
             const pass = document.getElementById('admin-pass').value.trim();
             const t = document.getElementById('in-tema').value.trim();
@@ -390,17 +416,27 @@
             btn.innerText = "Verificando...";
 
             try {
+                // 1) Intentamos como RSS
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    await addDoc(colRef, { n: data.feed.title, t, u, pass, fecha: Date.now() });
+                    await addDoc(colRef, { n: data.feed.title, t, u, pass, tipo: 'rss', fecha: Date.now() });
                     document.getElementById('in-url').value = '';
-                    alert("✅ ¡Éxito! Medio añadido.");
+                    alert("✅ ¡Éxito! Medio RSS añadido.");
+                    return;
+                }
+                // 2) Si no es RSS, probamos como sitemap de noticias
+                btn.innerText = "Probando sitemap...";
+                const items = await fetchSitemap(u);
+                if (items.length > 0) {
+                    await addDoc(colRef, { n: nombreDesdeUrl(u), t, u, pass, tipo: 'sitemap', fecha: Date.now() });
+                    document.getElementById('in-url').value = '';
+                    alert(`✅ ¡Éxito! Sitemap añadido (${items.length} noticias).`);
                 } else {
-                    alert("❌ La URL no parece un RSS válido.");
+                    alert("❌ La URL no parece un RSS ni un sitemap de noticias válido.");
                 }
             } catch(e) {
-                alert("❌ ERROR: Clave incorrecta o fallo de conexión.");
+                alert("❌ ERROR: fallo de conexión o formato no válido.");
             } finally {
                 btn.innerText = "+ Guardar en la Nube";
             }
@@ -492,8 +528,6 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
-                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
-                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
                             <div class="card" style="opacity:0.75;">
@@ -568,9 +602,21 @@
             // 2) Rellenamos cada sección a medida que llegan los datos (en paralelo)
             await Promise.all(activas.map(async f => {
                 try {
+                    if (f.tipo === 'sitemap') {
+                        const todos = await fetchSitemap(f.u);
+                        if (miToken !== cargaToken) return; // carga obsoleta, abortar
+                        const items = todos
+                            .filter(it => !leidas.some(l => l.link === it.link))
+                            .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
+                            .slice(0, 10);
+                        items.forEach(it => {
+                            secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img: it.img }, false));
+                        });
+                        return;
+                    }
                     const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
                     const data = await res.json();
-                    if (miToken !== cargaToken) return;
+                    if (miToken !== cargaToken) return; // carga obsoleta, abortar
                     if (data.status === 'ok') {
                         const items = data.items
                             .filter(it => !leidas.some(l => l.link === it.link))
