@@ -528,13 +528,13 @@
         };
 
         window.borrarMedio = async (id) => {
-            const pass = document.getElementById('admin-pass').value;
-            if (!pass) return alert("Escribe la clave para poder borrar.");
-            if (confirm("¿Eliminar este medio?")) {
-                try {
-                    await deleteDoc(doc(db, "medios", id));
-                } catch(e) { alert("No tienes permiso."); }
-            }
+            // Usa la clave del panel Admin si está escrita; si no, la pide por diálogo
+            let pass = document.getElementById('admin-pass').value.trim();
+            if (!pass) pass = (prompt("Escribe la clave maestra para borrar este medio:") || '').trim();
+            if (!pass) return;
+            try {
+                await deleteDoc(doc(db, "medios", id));
+            } catch(e) { alert("No se pudo borrar (sin permiso o error de conexión)."); }
         };
 
         let cargaToken = 0;
@@ -556,8 +556,6 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
-                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
-                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
                         const linkSeg = (it.url || '').replace(/'/g, '%27');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
