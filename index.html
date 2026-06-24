@@ -87,6 +87,12 @@
 
         .btn-accion { position: absolute; top: 8px; right: 8px; background: white; border-radius: 50%; width: 28px; height: 28px; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; z-index: 20; font-size: 14px; }
 
+        /* Arrastrar noticias entre temas (vista Leídas) */
+        .card[draggable="true"] { cursor: grab; }
+        .card.dragging { opacity: 0.4; }
+        .tema-drop.drag-over { outline: 2px dashed var(--a); outline-offset: 3px; background: rgba(212,175,55,0.18); }
+        .card.drag-over { outline: 2px dashed var(--a); outline-offset: 2px; }
+
         /* ── MÓVIL ── */
         .orden-item { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 6px; margin-bottom: 4px; background: #f9f9f9; border: 1px solid #eee; cursor: grab; user-select: none; }
         .orden-item:active { cursor: grabbing; }
@@ -188,7 +194,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBkzM8j9-uw8hrDimBF0ez2ER4j54Vk3Ko",
@@ -215,6 +221,7 @@
         let vista = 'ALL';
         let filtroVal = '';
         let busqueda = '';
+        let dragLeidaId = null;
 
         function fuentesOrdenadas() {
             if (ordenIds.length === 0) return fuentes;
@@ -537,6 +544,37 @@
             } catch(e) { alert("No se pudo borrar (sin permiso o error de conexión)."); }
         };
 
+        // Tema actual de una noticia leída (override manual o el del medio)
+        function temaDeLeida(it) {
+            if (it.temaOverride) return it.temaOverride;
+            const fuente = fuentes.find(f => f.n === it.medio);
+            return fuente ? (fuente.t || 'Otros') : 'Otros';
+        }
+
+        // Guarda en la nube el nuevo tema al arrastrar una noticia
+        async function moverLeidaTema(id, nuevoTema) {
+            const it = leidas.find(l => l._id === id);
+            if (!it || temaDeLeida(it) === nuevoTema) return;
+            try {
+                await updateDoc(doc(db, "leidas", id), { temaOverride: nuevoTema });
+            } catch(e) { alert("No se pudo mover la noticia."); }
+        }
+
+        // Convierte un elemento en zona donde soltar noticias del tema indicado
+        function activarZonaTema(el, tema) {
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                el.classList.add('drag-over');
+            });
+            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+            el.addEventListener('drop', e => {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                if (dragLeidaId) moverLeidaTema(dragLeidaId, tema);
+            });
+        }
+
         let cargaToken = 0;
 
         async function cargar() {
@@ -583,25 +621,55 @@
                     g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>';
                     return;
                 }
-                // Agrupar por tema buscando el medio en fuentes
+                // Agrupar por tema (override manual o el del medio)
                 const temaMap = {};
                 for (const it of filtradas) {
-                    const fuente = fuentes.find(f => f.n === it.medio);
-                    const tema = fuente ? (fuente.t || 'Otros') : 'Otros';
+                    const tema = temaDeLeida(it);
                     if (!temaMap[tema]) temaMap[tema] = [];
                     temaMap[tema].push(it);
                 }
-                // Ordenar temas igual que en vista principal (por orden de fuentes)
+                // Temas en el orden del panel principal + los que tengan noticias
                 const temasOrdenados = [...new Set(fuentesOrdenadas().map(f => f.t || 'Otros'))];
                 Object.keys(temaMap).forEach(t => { if (!temasOrdenados.includes(t)) temasOrdenados.push(t); });
-                for (const tema of temasOrdenados) {
-                    if (!temaMap[tema]) continue;
-                    const label = busqueda
-                        ? `${tema} <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>`
-                        : tema;
-                    g.insertAdjacentHTML('beforeend', `<div class="header-medio" style="grid-column:1/-1;">${label}</div>`);
-                    temaMap[tema].forEach(it => g.insertAdjacentHTML('beforeend', renderCard(it, true)));
-                }
+
+                temasOrdenados.forEach(tema => {
+                    const arts = temaMap[tema] || [];
+                    // Al buscar, ocultamos temas vacíos; sin búsqueda los dejamos como zona para soltar
+                    if (busqueda && arts.length === 0) return;
+
+                    const wrap = document.createElement('div');
+                    wrap.style.display = 'contents';
+                    g.appendChild(wrap);
+
+                    const header = document.createElement('div');
+                    header.className = 'header-medio tema-drop';
+                    header.style.gridColumn = '1 / -1';
+                    const labelBusq = busqueda ? ` <small style="font-size:12px;color:#999;font-weight:normal;">— filtrando por "${busqueda}"</small>` : '';
+                    header.innerHTML = `<span>${tema}${labelBusq}</span>` +
+                        `<small style="font-weight:normal;color:#bbb;font-size:11px;">${arts.length ? arts.length + ' 📰' : 'arrastra aquí'}</small>`;
+                    wrap.appendChild(header);
+                    activarZonaTema(header, tema);
+
+                    arts.forEach(it => {
+                        const tmp = document.createElement('div');
+                        tmp.innerHTML = renderCard(it, true);
+                        const card = tmp.firstElementChild;
+                        card.setAttribute('draggable', 'true');
+                        card.dataset.leidaId = it._id;
+                        card.addEventListener('dragstart', e => {
+                            dragLeidaId = it._id;
+                            card.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                        });
+                        card.addEventListener('dragend', () => {
+                            dragLeidaId = null;
+                            card.classList.remove('dragging');
+                            document.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+                        });
+                        activarZonaTema(card, tema);
+                        wrap.appendChild(card);
+                    });
+                });
                 return;
             }
 
