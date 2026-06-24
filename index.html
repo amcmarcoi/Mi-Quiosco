@@ -37,7 +37,7 @@
         .nav-admin-btn {
             background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
             border: 1px solid rgba(255,255,255,0.2) !important;
-            margin-left: auto; padding: 0 10px;
+            margin-left: auto;
         }
         .nav-admin-btn:hover { background: rgba(255,255,255,0.2); color: white; }
         .nav-admin-btn.open { background: white; color: var(--p); }
@@ -117,6 +117,7 @@
         <div class="nav-links" id="nav-links">
             <button class="nav-btn active" id="btn-all" onclick="window.cambiarVista('ALL')">🏠 Principal</button>
             <button class="nav-btn" id="btn-leidas" onclick="window.cambiarVista('LEIDAS')">👁️ Leídas</button>
+            <button class="nav-btn" id="btn-papelera" onclick="window.cambiarVista('PAPELERA')">🗑️ Papelera <span id="badge-papelera" style="display:none;background:#ff7675;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
 
             <div class="nav-dropdown" id="dd-temas">
                 <button class="nav-btn" id="btn-temas" onclick="window.toggleDropdown('temas')">🏷️ Temas ▾</button>
@@ -127,17 +128,15 @@
                 <button class="nav-btn" id="btn-medios" onclick="window.toggleDropdown('medios')">📺 Medios ▾</button>
                 <div class="nav-dropdown-menu" id="menu-medios"></div>
             </div>
-
-            <button class="nav-btn" id="btn-papelera" onclick="window.cambiarVista('PAPELERA')">🗑️ Papelera <span id="badge-papelera" style="display:none;background:#ff7675;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
         </div>
 
         <!-- versión móvil duplicada -->
         <div class="nav-links-mobile" id="nav-links-mobile">
             <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
+            <button class="nav-btn" onclick="window.cambiarVista('PAPELERA'); closeMobile()">🗑️ Papelera</button>
             <div id="mobile-temas"></div>
             <div id="mobile-medios"></div>
-            <button class="nav-btn" onclick="window.cambiarVista('PAPELERA'); closeMobile()">🗑️ Papelera</button>
         </div>
 
         <div style="position:relative; margin-left:12px;">
@@ -152,7 +151,7 @@
                 padding:0; width:auto; margin:0; line-height:1;">×</button>
         </div>
 
-        <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()" title="Admin">⚙️</button>
+        <button class="nav-admin-btn" id="btn-admin" onclick="window.toggleAdmin()">⚙️ Admin</button>
         <button class="nav-hamburger" onclick="window.toggleMobile()">☰</button>
     </nav>
 
@@ -493,6 +492,8 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
+                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
+                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
                             <div class="card" style="opacity:0.75;">
