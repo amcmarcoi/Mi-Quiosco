@@ -92,6 +92,20 @@
         .card.dragging { opacity: 0.4; }
         .tema-drop.drag-over { outline: 2px dashed var(--a); outline-offset: 3px; background: rgba(212,175,55,0.18); }
         .card.drag-over { outline: 2px dashed var(--a); outline-offset: 2px; }
+        .seccion-drop.drag-over { outline: 2px dashed #0984e3; outline-offset: 3px; background: rgba(9,132,227,0.12); }
+
+        /* Tarjetas del panel editorial */
+        .card-editorial { padding-top: 4px; }
+        .card-editorial.hecha { opacity: 0.6; }
+        .card-editorial.hecha .card-title { text-decoration: line-through; }
+        .estado-badge { display: inline-block; margin: 8px 8px 0; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; align-self: flex-start; }
+        .badge-pend { background: #ffeaa7; color: #b8860b; }
+        .badge-hecha { background: #d4f7dc; color: #1e7e34; }
+        .ed-acciones { display: flex; gap: 4px; padding: 8px; border-top: 1px solid #f0f0f0; margin-top: auto; align-items: center; }
+        .ed-btn { width: auto; margin: 0; padding: 5px 8px; font-size: 11px; font-weight: 600; border: 1px solid #ddd; background: #fafafa; cursor: pointer; border-radius: 5px; }
+        .ed-btn-ok { background: #2ecc71; color: white; border-color: #2ecc71; }
+        .ed-btn-del { background: #ffeaea; border-color: #ffd0d0; }
+        .ed-sel { flex: 1; margin: 0; padding: 5px; font-size: 11px; min-width: 60px; }
 
         /* ── MÓVIL ── */
         .orden-item { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 6px; margin-bottom: 4px; background: #f9f9f9; border: 1px solid #eee; cursor: grab; user-select: none; }
@@ -123,6 +137,7 @@
         <div class="nav-links" id="nav-links">
             <button class="nav-btn active" id="btn-all" onclick="window.cambiarVista('ALL')">🏠 Principal</button>
             <button class="nav-btn" id="btn-leidas" onclick="window.cambiarVista('LEIDAS')">👁️ Leídas</button>
+            <button class="nav-btn" id="btn-editorial" onclick="window.cambiarVista('EDITORIAL')">📋 Gestión <span id="badge-editorial" style="display:none;background:#0984e3;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
 
             <div class="nav-dropdown" id="dd-temas">
                 <button class="nav-btn" id="btn-temas" onclick="window.toggleDropdown('temas')">🏷️ Temas ▾</button>
@@ -141,6 +156,7 @@
         <div class="nav-links-mobile" id="nav-links-mobile">
             <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
+            <button class="nav-btn" onclick="window.cambiarVista('EDITORIAL'); closeMobile()">📋 Gestión</button>
             <div id="mobile-temas"></div>
             <div id="mobile-medios"></div>
             <button class="nav-btn" onclick="window.cambiarVista('PAPELERA'); closeMobile()">🗑️ Papelera</button>
@@ -183,6 +199,13 @@
             <button class="btn-add" id="btn-art" onclick="window.añadirArticulo()">+ Añadir Noticia</button>
         </div>
         <div class="seccion">
+            <h3>Nueva Tarea Editorial</h3>
+            <input type="text" id="in-ed-titulo" placeholder="Titular / tema a redactar">
+            <select id="in-ed-seccion"></select>
+            <input type="url" id="in-ed-link" placeholder="Enlace de referencia (opcional)">
+            <button class="btn-add" id="btn-ed" onclick="window.crearTareaEditorial()">+ Crear Tarea</button>
+        </div>
+        <div class="seccion">
             <h3>Ordenar Medios (arrastrar)</h3>
             <div id="lista-orden"></div>
         </div>
@@ -211,17 +234,20 @@
         const leidasRef = collection(db, "leidas");
         const articulosRef = collection(db, "articulos");
         const papeleraRef = collection(db, "papelera");
+        const editorialRef = collection(db, "editorial");
         const ordenDoc = doc(db, "config", "orden");
 
         let fuentes = [];
         let leidas = [];
         let articulosManuales = [];
         let papelera = [];
+        let editorial = [];
         let ordenIds = [];
         let vista = 'ALL';
         let filtroVal = '';
         let busqueda = '';
         let dragLeidaId = null;
+        let dragEditorialId = null;
 
         function fuentesOrdenadas() {
             if (ordenIds.length === 0) return fuentes;
@@ -257,6 +283,12 @@
             papelera = snapshot.docs.map(d => ({ ...d.data(), _id: d.id }));
             actualizarBadgePapelera();
             if (vista === 'PAPELERA') cargar();
+        });
+
+        onSnapshot(query(editorialRef, orderBy("fecha", "desc")), (snapshot) => {
+            editorial = snapshot.docs.map(d => ({ ...d.data(), _id: d.id }));
+            actualizarBadgeEditorial();
+            if (vista === 'EDITORIAL') cargar();
         });
 
         // Cierra dropdowns al hacer clic fuera
@@ -309,7 +341,7 @@
 
         window.cambiarVista = (v) => {
             vista = v; filtroVal = '';
-            const mapa = { ALL: 'btn-all', LEIDAS: 'btn-leidas', PAPELERA: 'btn-papelera' };
+            const mapa = { ALL: 'btn-all', LEIDAS: 'btn-leidas', PAPELERA: 'btn-papelera', EDITORIAL: 'btn-editorial' };
             setNavActivo(mapa[v] || '');
             document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('show'));
             cargar();
@@ -324,6 +356,26 @@
             } else {
                 badge.style.display = 'none';
             }
+        }
+
+        function actualizarBadgeEditorial() {
+            const badge = document.getElementById('badge-editorial');
+            if (!badge) return;
+            const pendientes = editorial.filter(e => e.estado !== 'hecha').length;
+            if (pendientes > 0) {
+                badge.textContent = pendientes;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Lista de secciones web (reutiliza los temas de las fuentes + las ya usadas en tareas)
+        function seccionesDisponibles() {
+            const secciones = [...new Set(fuentesOrdenadas().map(f => f.t).filter(Boolean))];
+            editorial.forEach(e => { if (e.seccion && !secciones.includes(e.seccion)) secciones.push(e.seccion); });
+            if (secciones.length === 0) secciones.push('General');
+            return secciones;
         }
 
         window.filtrarTema = (val) => {
@@ -349,6 +401,12 @@
             document.getElementById('menu-medios').innerHTML = ord.map(f => `<a onclick="window.filtrarMedio('${f.u}')">${f.n}</a>`).join('');
             document.getElementById('mobile-temas').innerHTML = temas.map(t => `<button class="nav-btn" onclick="window.filtrarTema('${t}'); closeMobile()">${t}</button>`).join('');
             document.getElementById('mobile-medios').innerHTML = ord.map(f => `<button class="nav-btn" onclick="window.filtrarMedio('${f.u}'); closeMobile()">${f.n}</button>`).join('');
+            const sel = document.getElementById('in-ed-seccion');
+            if (sel) {
+                const prev = sel.value;
+                sel.innerHTML = seccionesDisponibles().map(s => `<option value="${s}">${s}</option>`).join('');
+                if (prev) sel.value = prev;
+            }
             actualizarMenusActivo();
             renderListaOrden();
         }
@@ -544,6 +602,61 @@
             } catch(e) { alert("No se pudo borrar (sin permiso o error de conexión)."); }
         };
 
+        // ── Panel de gestión editorial ──
+        function seccionPorMedio(medio) {
+            const fuente = fuentes.find(f => f.n === medio);
+            if (fuente && fuente.t) return fuente.t;
+            return seccionesDisponibles()[0] || 'General';
+        }
+
+        // Crear tarea editorial desde cero (formulario Admin)
+        window.crearTareaEditorial = async () => {
+            const titulo = document.getElementById('in-ed-titulo').value.trim();
+            const seccion = document.getElementById('in-ed-seccion').value;
+            const link = document.getElementById('in-ed-link').value.trim();
+            if (!titulo) return alert("Escribe un titular o tema para la tarea.");
+            await addDoc(editorialRef, {
+                titulo, seccion: seccion || 'General', link, img: '',
+                estado: 'por_realizar', origen: 'manual', fecha: Date.now()
+            });
+            document.getElementById('in-ed-titulo').value = '';
+            document.getElementById('in-ed-link').value = '';
+            alert("✅ Tarea creada en el panel de gestión.");
+        };
+
+        // Marcar una noticia (de cualquier vista) para producirla
+        window.enviarEditorial = async (link, titulo, medio, img) => {
+            const l = (link || '').replace(/%27/g, "'");
+            if (editorial.some(e => e.link && e.link === l)) {
+                return alert("Esta noticia ya está en el panel de gestión.");
+            }
+            await addDoc(editorialRef, {
+                titulo, seccion: seccionPorMedio(medio), link: l, img: img || '',
+                estado: 'por_realizar', origen: 'marcada', fecha: Date.now()
+            });
+            alert("📋 Enviada al panel de gestión (Por realizar).");
+        };
+
+        window.toggleEstadoEditorial = async (id) => {
+            const t = editorial.find(e => e._id === id);
+            if (!t) return;
+            await updateDoc(doc(db, "editorial", id), { estado: t.estado === 'hecha' ? 'por_realizar' : 'hecha' });
+        };
+
+        window.cambiarSeccionEditorial = async (id, seccion) => {
+            await updateDoc(doc(db, "editorial", id), { seccion });
+        };
+
+        async function moverEditorialSeccion(id, seccion) {
+            const t = editorial.find(e => e._id === id);
+            if (!t || t.seccion === seccion) return;
+            await updateDoc(doc(db, "editorial", id), { seccion });
+        }
+
+        window.borrarEditorial = async (id) => {
+            await deleteDoc(doc(db, "editorial", id));
+        };
+
         // Tema actual de una noticia leída (override manual o el del medio)
         function temaDeLeida(it) {
             if (it.temaOverride) return it.temaOverride;
@@ -572,6 +685,21 @@
                 e.preventDefault();
                 el.classList.remove('drag-over');
                 if (dragLeidaId) moverLeidaTema(dragLeidaId, tema);
+            });
+        }
+
+        // Zona donde soltar tareas editoriales para cambiarlas de sección web
+        function activarZonaSeccion(el, seccion) {
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                el.classList.add('drag-over');
+            });
+            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+            el.addEventListener('drop', e => {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                if (dragEditorialId) moverEditorialSeccion(dragEditorialId, seccion);
             });
         }
 
@@ -673,6 +801,87 @@
                 return;
             }
 
+            if (vista === 'EDITORIAL') {
+                const filtradas = editorial.filter(it =>
+                    !busqueda || (it.titulo || '').toLowerCase().includes(busqueda)
+                );
+                g.innerHTML = '';
+                if (editorial.length === 0) {
+                    g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">No hay tareas. Marca noticias con 📋 o crea una desde el panel Admin.</p>';
+                    return;
+                }
+                // Agrupar por sección web (= tema)
+                const secMap = {};
+                for (const it of filtradas) {
+                    const s = it.seccion || 'General';
+                    if (!secMap[s]) secMap[s] = [];
+                    secMap[s].push(it);
+                }
+                const secciones = seccionesDisponibles();
+                Object.keys(secMap).forEach(s => { if (!secciones.includes(s)) secciones.push(s); });
+                const opts = secciones.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                secciones.forEach(seccion => {
+                    const tareas = secMap[seccion] || [];
+                    if (busqueda && tareas.length === 0) return;
+                    const pend = tareas.filter(t => t.estado !== 'hecha').length;
+                    const hechas = tareas.length - pend;
+
+                    const wrap = document.createElement('div');
+                    wrap.style.display = 'contents';
+                    g.appendChild(wrap);
+
+                    const header = document.createElement('div');
+                    header.className = 'header-medio seccion-drop';
+                    header.style.gridColumn = '1 / -1';
+                    header.innerHTML = `<span>📂 ${seccion}</span>` +
+                        `<small style="font-weight:normal;color:#888;font-size:12px;">${pend} por realizar · ${hechas} hechas</small>`;
+                    wrap.appendChild(header);
+                    activarZonaSeccion(header, seccion);
+
+                    // Por realizar primero, luego hechas
+                    const ordenadas = [...tareas].sort((a, b) =>
+                        (a.estado === 'hecha' ? 1 : 0) - (b.estado === 'hecha' ? 1 : 0));
+
+                    ordenadas.forEach(t => {
+                        const hecha = t.estado === 'hecha';
+                        const tit = (t.titulo || '').replace(/</g, '&lt;');
+                        const card = document.createElement('div');
+                        card.className = 'card card-editorial' + (hecha ? ' hecha' : '');
+                        card.setAttribute('draggable', 'true');
+                        card.dataset.edId = t._id;
+                        const enlace = t.link
+                            ? `<a href="${t.link}" target="_blank" style="text-decoration:none;color:inherit;">
+                                   ${t.img ? `<img src="${t.img}" loading="lazy">` : ''}
+                                   <div class="card-body"><p class="card-title">${tit}</p></div>
+                               </a>`
+                            : `<div class="card-body"><p class="card-title">${tit}</p></div>`;
+                        card.innerHTML = `
+                            <span class="estado-badge ${hecha ? 'badge-hecha' : 'badge-pend'}">${hecha ? '✓ Hecha' : '● Por realizar'}</span>
+                            ${enlace}
+                            <div class="ed-acciones">
+                                <button class="ed-btn ${hecha ? '' : 'ed-btn-ok'}" onclick="window.toggleEstadoEditorial('${t._id}')">${hecha ? '↩️ Reabrir' : '✓ Hecha'}</button>
+                                <select class="ed-sel" onchange="window.cambiarSeccionEditorial('${t._id}', this.value)">${opts}</select>
+                                <button class="ed-btn ed-btn-del" onclick="window.borrarEditorial('${t._id}')">🗑️</button>
+                            </div>`;
+                        card.querySelector('.ed-sel').value = seccion;
+                        card.addEventListener('dragstart', e => {
+                            dragEditorialId = t._id;
+                            card.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                        });
+                        card.addEventListener('dragend', () => {
+                            dragEditorialId = null;
+                            card.classList.remove('dragging');
+                            document.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+                        });
+                        activarZonaSeccion(card, seccion);
+                        wrap.appendChild(card);
+                    });
+                });
+                return;
+            }
+
             const ord = fuentesOrdenadas();
             let activas = vista === 'ALL' ? ord :
                           vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) :
@@ -753,14 +962,15 @@
             const linkSeg = (it.link || '').replace(/'/g, '%27');
             const medioSeg = (it.medio || '').replace(/['"""\\]/g, ' ');
             const artId = (it._artId || '').replace(/'/g, '');
+            const btnEd = `<button class="btn-accion" title="Enviar al panel de gestión" onclick="event.stopPropagation(); window.enviarEditorial('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">📋</button>`;
             let boton;
             if (esArchivo) {
-                boton = `<button class="btn-accion" onclick="window.restaurar('${linkSeg}')">↩️</button>`;
+                boton = `<button class="btn-accion" style="right:40px;" onclick="window.restaurar('${linkSeg}')">↩️</button>` + btnEd;
             } else if (esManual) {
-                boton = `<button class="btn-accion" style="right:40px;" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>
-                         <button class="btn-accion" onclick="window.borrarArticulo('${artId}')">🗑️</button>`;
+                boton = `<button class="btn-accion" style="right:72px;" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>
+                         <button class="btn-accion" style="right:40px;" onclick="window.borrarArticulo('${artId}')">🗑️</button>` + btnEd;
             } else {
-                boton = `<button class="btn-accion" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>`;
+                boton = `<button class="btn-accion" style="right:40px;" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>` + btnEd;
             }
             return `
                 <div class="card">
