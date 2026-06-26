@@ -106,6 +106,7 @@
         .ed-btn-ok { background: #2ecc71; color: white; border-color: #2ecc71; }
         .ed-btn-del { background: #ffeaea; border-color: #ffd0d0; }
         .ed-sel { flex: 1; margin: 0; padding: 5px; font-size: 11px; min-width: 60px; }
+        .ed-fecha { font-size: 10px; color: #1e7e34; font-weight: 600; white-space: nowrap; }
 
         /* ── MÓVIL ── */
         .orden-item { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 6px; margin-bottom: 4px; background: #f9f9f9; border: 1px solid #eee; cursor: grab; user-select: none; }
@@ -640,8 +641,18 @@
         window.toggleEstadoEditorial = async (id) => {
             const t = editorial.find(e => e._id === id);
             if (!t) return;
-            await updateDoc(doc(db, "editorial", id), { estado: t.estado === 'hecha' ? 'por_realizar' : 'hecha' });
+            const pasaAHecha = t.estado !== 'hecha';
+            await updateDoc(doc(db, "editorial", id), {
+                estado: pasaAHecha ? 'hecha' : 'por_realizar',
+                fechaHecha: pasaAHecha ? Date.now() : null
+            });
         };
+
+        function fechaCorta(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        }
 
         window.cambiarSeccionEditorial = async (id, seccion) => {
             await updateDoc(doc(db, "editorial", id), { seccion });
@@ -861,6 +872,7 @@
                             ${enlace}
                             <div class="ed-acciones">
                                 <button class="ed-btn ${hecha ? '' : 'ed-btn-ok'}" onclick="window.toggleEstadoEditorial('${t._id}')">${hecha ? '↩️ Reabrir' : '✓ Hecha'}</button>
+                                ${hecha && t.fechaHecha ? `<span class="ed-fecha" title="Fecha de realización">📅 ${fechaCorta(t.fechaHecha)}</span>` : ''}
                                 <select class="ed-sel" onchange="window.cambiarSeccionEditorial('${t._id}', this.value)">${opts}</select>
                                 <button class="ed-btn ed-btn-del" onclick="window.borrarEditorial('${t._id}')">🗑️</button>
                             </div>`;
