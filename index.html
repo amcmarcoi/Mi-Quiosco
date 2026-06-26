@@ -133,10 +133,9 @@
 
     <!-- NAVBAR -->
     <nav class="navbar" id="navbar">
-        <span class="navbar-brand">📰 QUIOSCO</span>
+        <span class="navbar-brand" id="brand-home" onclick="window.cambiarVista('ALL')" style="cursor:pointer;" title="Ir a Principal">📰 QUIOSCO</span>
 
         <div class="nav-links" id="nav-links">
-            <button class="nav-btn active" id="btn-all" onclick="window.cambiarVista('ALL')">🏠 Principal</button>
             <button class="nav-btn" id="btn-leidas" onclick="window.cambiarVista('LEIDAS')">👁️ Leídas</button>
             <button class="nav-btn" id="btn-editorial" onclick="window.cambiarVista('EDITORIAL')">📋 Gestión <span id="badge-editorial" style="display:none;background:#0984e3;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:2px;"></span></button>
 
@@ -155,7 +154,6 @@
 
         <!-- versión móvil duplicada -->
         <div class="nav-links-mobile" id="nav-links-mobile">
-            <button class="nav-btn" onclick="window.cambiarVista('ALL'); closeMobile()">🏠 Principal</button>
             <button class="nav-btn" onclick="window.cambiarVista('LEIDAS'); closeMobile()">👁️ Leídas</button>
             <button class="nav-btn" onclick="window.cambiarVista('EDITORIAL'); closeMobile()">📋 Gestión</button>
             <div id="mobile-temas"></div>
@@ -342,7 +340,7 @@
 
         window.cambiarVista = (v) => {
             vista = v; filtroVal = '';
-            const mapa = { ALL: 'btn-all', LEIDAS: 'btn-leidas', PAPELERA: 'btn-papelera', EDITORIAL: 'btn-editorial' };
+            const mapa = { LEIDAS: 'btn-leidas', PAPELERA: 'btn-papelera', EDITORIAL: 'btn-editorial' };
             setNavActivo(mapa[v] || '');
             document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('show'));
             cargar();
