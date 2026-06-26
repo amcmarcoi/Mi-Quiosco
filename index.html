@@ -616,13 +616,17 @@
             const seccion = document.getElementById('in-ed-seccion').value;
             const link = document.getElementById('in-ed-link').value.trim();
             if (!titulo) return alert("Escribe un titular o tema para la tarea.");
-            await addDoc(editorialRef, {
-                titulo, seccion: seccion || 'General', link, img: '',
-                estado: 'por_realizar', origen: 'manual', fecha: Date.now()
-            });
-            document.getElementById('in-ed-titulo').value = '';
-            document.getElementById('in-ed-link').value = '';
-            alert("✅ Tarea creada en el panel de gestión.");
+            try {
+                await addDoc(editorialRef, {
+                    titulo, seccion: seccion || 'General', link, img: '',
+                    estado: 'por_realizar', origen: 'manual', fecha: Date.now()
+                });
+                document.getElementById('in-ed-titulo').value = '';
+                document.getElementById('in-ed-link').value = '';
+                alert("✅ Tarea creada en el panel de gestión.");
+            } catch(e) {
+                alert("No se pudo crear la tarea. Revisa las reglas de Firestore para la colección editorial.\n\n(" + e.message + ")");
+            }
         };
 
         // Marcar una noticia (de cualquier vista) para producirla
@@ -631,21 +635,29 @@
             if (editorial.some(e => e.link && e.link === l)) {
                 return alert("Esta noticia ya está en el panel de gestión.");
             }
-            await addDoc(editorialRef, {
-                titulo, seccion: seccionPorMedio(medio), link: l, img: img || '',
-                estado: 'por_realizar', origen: 'marcada', fecha: Date.now()
-            });
-            alert("📋 Enviada al panel de gestión (Por realizar).");
+            try {
+                await addDoc(editorialRef, {
+                    titulo, seccion: seccionPorMedio(medio), link: l, img: img || '',
+                    estado: 'por_realizar', origen: 'marcada', fecha: Date.now()
+                });
+                alert("📋 Enviada al panel de gestión (Por realizar).");
+            } catch(e) {
+                alert("No se pudo enviar al panel. Revisa las reglas de Firestore para la colección editorial.\n\n(" + e.message + ")");
+            }
         };
 
         window.toggleEstadoEditorial = async (id) => {
             const t = editorial.find(e => e._id === id);
             if (!t) return;
             const pasaAHecha = t.estado !== 'hecha';
-            await updateDoc(doc(db, "editorial", id), {
-                estado: pasaAHecha ? 'hecha' : 'por_realizar',
-                fechaHecha: pasaAHecha ? Date.now() : null
-            });
+            try {
+                await updateDoc(doc(db, "editorial", id), {
+                    estado: pasaAHecha ? 'hecha' : 'por_realizar',
+                    fechaHecha: pasaAHecha ? Date.now() : null
+                });
+            } catch(e) {
+                alert("No se pudo actualizar la tarea. Revisa que las reglas de Firestore permitan el campo 'fechaHecha' en la colección editorial.\n\n(" + e.message + ")");
+            }
         };
 
         function fechaCorta(ts) {
@@ -655,13 +667,21 @@
         }
 
         window.cambiarSeccionEditorial = async (id, seccion) => {
-            await updateDoc(doc(db, "editorial", id), { seccion });
+            try {
+                await updateDoc(doc(db, "editorial", id), { seccion });
+            } catch(e) {
+                alert("No se pudo cambiar la sección.\n\n(" + e.message + ")");
+            }
         };
 
         async function moverEditorialSeccion(id, seccion) {
             const t = editorial.find(e => e._id === id);
             if (!t || t.seccion === seccion) return;
-            await updateDoc(doc(db, "editorial", id), { seccion });
+            try {
+                await updateDoc(doc(db, "editorial", id), { seccion });
+            } catch(e) {
+                alert("No se pudo mover la tarea.\n\n(" + e.message + ")");
+            }
         }
 
         window.borrarEditorial = async (id) => {
