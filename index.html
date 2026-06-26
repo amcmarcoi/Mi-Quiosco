@@ -108,6 +108,16 @@
         .ed-sel { flex: 1; margin: 0; padding: 5px; font-size: 11px; min-width: 60px; }
         .ed-fecha { font-size: 10px; color: #1e7e34; font-weight: 600; white-space: nowrap; }
 
+        /* Vista lista (apartado Subir) */
+        .sub-toggle { display: inline-flex; gap: 0; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; margin-left: 8px; vertical-align: middle; }
+        .sub-toggle button { width: auto; margin: 0; border: none; border-radius: 0; padding: 6px 12px; font-size: 12px; background: white; color: #555; cursor: pointer; }
+        .sub-toggle button.active { background: var(--p); color: white; }
+        .sub-fila { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; background: white; border: 1px solid #eee; border-radius: 8px; padding: 8px 12px; }
+        .sub-fila .sf-texto { flex: 1; min-width: 0; }
+        .sub-fila .sf-titulo { font-size: 0.85rem; font-weight: 700; color: #1a1a1a; margin: 0; }
+        .sub-fila .sf-url { font-size: 11px; color: #0984e3; word-break: break-all; text-decoration: none; }
+        .sub-fila .sf-acciones { display: flex; gap: 4px; flex-shrink: 0; }
+
         /* ── MÓVIL ── */
         .orden-item { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 6px; margin-bottom: 4px; background: #f9f9f9; border: 1px solid #eee; cursor: grab; user-select: none; }
         .orden-item:active { cursor: grabbing; }
@@ -251,6 +261,7 @@
         let dragLeidaId = null;
         let dragEditorialId = null;
         let importados = [];
+        let vistaSubir = 'tarjetas';
 
         function fuentesOrdenadas() {
             if (ordenIds.length === 0) return fuentes;
@@ -756,6 +767,8 @@
 
         window.limpiarImportados = () => { importados = []; cargar(); };
 
+        window.cambiarVistaSubir = (modo) => { vistaSubir = modo; cargar(); };
+
         // Busca imagen de una URL (al enviar a Leídas o Gestión)
         async function obtenerImagen(url) {
             if (!url) return '';
@@ -846,9 +859,6 @@
                     g.insertAdjacentHTML('beforeend', '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">La papelera está vacía.</p>');
                 } else {
                     filtradas.forEach(it => {
-                        const tSeguro = (it.titulo || '').replace(/['"""\\]/g, ' ');
-                        const imgSeg = (it.img || '').replace(/['"""\\]/g, '');
-                        const linkSeg = (it.url || '').replace(/'/g, '%27');
                         const id = (it._id || '').replace(/'/g, '');
                         g.insertAdjacentHTML('beforeend', `
                             <div class="card" style="opacity:0.75;">
@@ -873,20 +883,17 @@
                     g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:30px;color:#999;">No hay noticias leídas que coincidan.</p>';
                     return;
                 }
-                // Agrupar por tema (override manual o el del medio)
                 const temaMap = {};
                 for (const it of filtradas) {
                     const tema = temaDeLeida(it);
                     if (!temaMap[tema]) temaMap[tema] = [];
                     temaMap[tema].push(it);
                 }
-                // Temas en el orden del panel principal + los que tengan noticias
                 const temasOrdenados = [...new Set(fuentesOrdenadas().map(f => f.t || 'Otros'))];
                 Object.keys(temaMap).forEach(t => { if (!temasOrdenados.includes(t)) temasOrdenados.push(t); });
 
                 temasOrdenados.forEach(tema => {
                     const arts = temaMap[tema] || [];
-                    // Al buscar, ocultamos temas vacíos; sin búsqueda los dejamos como zona para soltar
                     if (busqueda && arts.length === 0) return;
 
                     const wrap = document.createElement('div');
@@ -934,7 +941,6 @@
                     g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">No hay tareas. Marca noticias con 📋 o crea una desde el panel Admin.</p>';
                     return;
                 }
-                // Agrupar por sección web (= tema)
                 const secMap = {};
                 for (const it of filtradas) {
                     const s = it.seccion || 'General';
@@ -963,7 +969,6 @@
                     wrap.appendChild(header);
                     activarZonaSeccion(header, seccion);
 
-                    // Por realizar primero, luego hechas
                     const ordenadas = [...tareas].sort((a, b) =>
                         (a.estado === 'hecha' ? 1 : 0) - (b.estado === 'hecha' ? 1 : 0));
 
@@ -1018,6 +1023,10 @@
                 tools.innerHTML = `
                     <p style="color:#666;font-size:13px;margin:0 0 12px;">Sube un <b>CSV</b> o <b>Excel</b> (de Discover Snoop) con columnas de <b>titular</b> y <b>URL</b>. Se detectan solas; si no hay cabeceras, se usa la 1ª columna como titular y la 2ª como URL.</p>
                     <input type="file" accept=".csv,.xlsx,.xls" onchange="window.manejarArchivo(this)" style="max-width:360px; display:inline-block; width:auto;">
+                    ${importados.length ? `<span class="sub-toggle">
+                        <button class="${vistaSubir === 'tarjetas' ? 'active' : ''}" onclick="window.cambiarVistaSubir('tarjetas')">▦ Iconos</button>
+                        <button class="${vistaSubir === 'lista' ? 'active' : ''}" onclick="window.cambiarVistaSubir('lista')">☰ Lista</button>
+                    </span>` : ''}
                     ${importados.length ? `<button class="btn-del" onclick="window.limpiarImportados()" style="font-size:12px;padding:6px 12px;margin-left:8px;">Limpiar lista (${importados.length})</button>` : ''}`;
                 g.appendChild(tools);
 
@@ -1030,6 +1039,23 @@
                     if (busqueda && !(it.titulo || '').toLowerCase().includes(busqueda)) return;
                     const tit = (it.titulo || '').replace(/</g, '&lt;');
                     const urlSeg = (it.url || '').replace(/"/g, '&quot;');
+
+                    if (vistaSubir === 'lista') {
+                        const fila = document.createElement('div');
+                        fila.className = 'sub-fila';
+                        fila.innerHTML = `
+                            <div class="sf-texto">
+                                <p class="sf-titulo">${tit}</p>
+                                ${it.url ? `<a href="${urlSeg}" target="_blank" class="sf-url">${urlSeg}</a>` : '<span style="font-size:11px;color:#c0392b;">⚠️ sin URL</span>'}
+                            </div>
+                            <div class="sf-acciones">
+                                <button class="ed-btn ed-btn-ok" onclick="window.importarALeidas(${idx})">👁️ Leídas</button>
+                                <button class="ed-btn" onclick="window.importarAGestion(${idx})">📋 Gestión</button>
+                            </div>`;
+                        g.appendChild(fila);
+                        return;
+                    }
+
                     const card = document.createElement('div');
                     card.className = 'card';
                     card.innerHTML = `
@@ -1074,7 +1100,6 @@
                 return;
             }
 
-            // 1) Creamos los contenedores en orden ANTES de los fetch, para fijar la posición
             const secciones = {};
             activas.forEach(f => {
                 const sec = document.createElement('div');
@@ -1088,12 +1113,11 @@
                 secciones[f.id] = sec;
             });
 
-            // 2) Rellenamos cada sección a medida que llegan los datos (en paralelo)
             await Promise.all(activas.map(async f => {
                 try {
                     if (f.tipo === 'sitemap') {
                         const todos = await fetchSitemap(f.u);
-                        if (miToken !== cargaToken) return; // carga obsoleta, abortar
+                        if (miToken !== cargaToken) return;
                         const items = todos
                             .filter(it => !leidas.some(l => l.link === it.link))
                             .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
@@ -1105,7 +1129,7 @@
                     }
                     const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
                     const data = await res.json();
-                    if (miToken !== cargaToken) return; // carga obsoleta, abortar
+                    if (miToken !== cargaToken) return;
                     if (data.status === 'ok') {
                         const items = data.items
                             .filter(it => !leidas.some(l => l.link === it.link))
