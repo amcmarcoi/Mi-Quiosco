@@ -217,6 +217,12 @@
             <button class="btn-add" id="btn-ed" onclick="window.crearTareaEditorial()">+ Crear Tarea</button>
         </div>
         <div class="seccion">
+            <h3>Temas / Secciones</h3>
+            <input type="text" id="in-nuevo-tema" placeholder="Nuevo tema (ej: Sucesos)">
+            <button class="btn-add" onclick="window.crearTema()">+ Crear Tema</button>
+            <div id="lista-temas" style="margin-top:8px;"></div>
+        </div>
+        <div class="seccion">
             <h3>Ordenar Medios (arrastrar)</h3>
             <div id="lista-orden"></div>
         </div>
@@ -248,6 +254,7 @@
         const papeleraRef = collection(db, "papelera");
         const editorialRef = collection(db, "editorial");
         const ordenDoc = doc(db, "config", "orden");
+        const temasDoc = doc(db, "config", "temas");
 
         let fuentes = [];
         let leidas = [];
@@ -262,6 +269,7 @@
         let dragEditorialId = null;
         let importados = [];
         let vistaSubir = 'tarjetas';
+        let temasManuales = [];
 
         function fuentesOrdenadas() {
             if (ordenIds.length === 0) return fuentes;
@@ -279,6 +287,12 @@
 
         onSnapshot(ordenDoc, (snap) => {
             ordenIds = snap.exists() ? (snap.data().ids || []) : [];
+            actualizarMenus();
+            cargar();
+        });
+
+        onSnapshot(temasDoc, (snap) => {
+            temasManuales = snap.exists() ? (snap.data().lista || []) : [];
             actualizarMenus();
             cargar();
         });
@@ -384,12 +398,43 @@
             }
         }
 
-        // Lista de secciones web (reutiliza los temas de las fuentes + las ya usadas en tareas)
+        // Lista de secciones web (temas manuales + temas de las fuentes + las ya usadas en tareas)
         function seccionesDisponibles() {
-            const secciones = [...new Set(fuentesOrdenadas().map(f => f.t).filter(Boolean))];
+            const secciones = [...new Set([...temasManuales, ...fuentesOrdenadas().map(f => f.t).filter(Boolean)])];
             editorial.forEach(e => { if (e.seccion && !secciones.includes(e.seccion)) secciones.push(e.seccion); });
             if (secciones.length === 0) secciones.push('General');
             return secciones;
+        }
+
+        window.crearTema = async () => {
+            const inp = document.getElementById('in-nuevo-tema');
+            const t = inp.value.trim();
+            if (!t) return;
+            if (temasManuales.includes(t)) return alert("Ese tema ya existe.");
+            try {
+                await setDoc(temasDoc, { lista: [...temasManuales, t] });
+                inp.value = '';
+            } catch(e) { alert("No se pudo crear el tema: " + e.message); }
+        };
+
+        window.borrarTema = async (t) => {
+            try {
+                await setDoc(temasDoc, { lista: temasManuales.filter(x => x !== t) });
+            } catch(e) { alert("No se pudo borrar el tema."); }
+        };
+
+        function renderListaTemas() {
+            const cont = document.getElementById('lista-temas');
+            if (!cont) return;
+            if (temasManuales.length === 0) {
+                cont.innerHTML = '<p style="font-size:11px;color:#bbb;margin:4px 0 0;">No hay temas manuales todavía.</p>';
+                return;
+            }
+            cont.innerHTML = temasManuales.map(t => `
+                <div class="orden-item" style="cursor:default;">
+                    <span class="orden-nombre">${t}</span>
+                    <button class="btn-del" onclick="window.borrarTema('${t.replace(/'/g, '')}')">✕</button>
+                </div>`).join('');
         }
 
         window.filtrarTema = (val) => {
@@ -410,7 +455,7 @@
 
         function actualizarMenus() {
             const ord = fuentesOrdenadas();
-            const temas = [...new Set(ord.map(f => f.t))];
+            const temas = [...new Set([...temasManuales, ...ord.map(f => f.t).filter(Boolean)])];
             document.getElementById('menu-temas').innerHTML = temas.map(t => `<a onclick="window.filtrarTema('${t}')">${t}</a>`).join('');
             document.getElementById('menu-medios').innerHTML = ord.map(f => `<a onclick="window.filtrarMedio('${f.u}')">${f.n}</a>`).join('');
             document.getElementById('mobile-temas').innerHTML = temas.map(t => `<button class="nav-btn" onclick="window.filtrarTema('${t}'); closeMobile()">${t}</button>`).join('');
@@ -423,6 +468,7 @@
             }
             actualizarMenusActivo();
             renderListaOrden();
+            renderListaTemas();
         }
 
         function renderListaOrden() {
@@ -889,7 +935,7 @@
                     if (!temaMap[tema]) temaMap[tema] = [];
                     temaMap[tema].push(it);
                 }
-                const temasOrdenados = [...new Set(fuentesOrdenadas().map(f => f.t || 'Otros'))];
+                const temasOrdenados = [...new Set([...temasManuales, ...fuentesOrdenadas().map(f => f.t || 'Otros')])];
                 Object.keys(temaMap).forEach(t => { if (!temasOrdenados.includes(t)) temasOrdenados.push(t); });
 
                 temasOrdenados.forEach(tema => {
