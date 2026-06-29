@@ -117,6 +117,7 @@
         .kanban-lista.drag-over { outline: 2px dashed #0984e3; background: rgba(9,132,227,0.08); }
         .kanban-card { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: grab; border: 1px solid #eee; }
         .kanban-card.dragging { opacity: 0.4; }
+        .kanban-card .kn-img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; background: #eee; display: block; }
         .kanban-card .kn-titulo { font-size: 0.85rem; font-weight: 700; color: #1a1a1a; margin: 0 0 8px; line-height: 1.3; }
         .kanban-card .kn-titulo a { color: inherit; text-decoration: none; }
         .kn-sec { display: inline-block; font-size: 10px; font-weight: 700; background: #e8e2ec; color: var(--p); padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
@@ -722,7 +723,6 @@
             { key: 'en_proceso', label: '⏳ En proceso' },
             { key: 'hecha',      label: '✅ Hecho' },
         ];
-        // Normaliza el estado guardado (compatibilidad con 'por_realizar' antiguo)
         function estadoNorm(t) {
             if (!t.estado || t.estado === 'por_realizar') return 'pendiente';
             return t.estado;
@@ -741,7 +741,6 @@
             }
         };
 
-        // Convierte una columna en zona donde soltar tarjetas (cambia su estado)
         function activarColumnaEstado(el, estado) {
             el.addEventListener('dragover', e => {
                 e.preventDefault();
@@ -1027,6 +1026,7 @@
                             ? `<p class="kn-titulo"><a href="${t.link}" target="_blank">${tit}</a></p>`
                             : `<p class="kn-titulo">${tit}</p>`;
                         card.innerHTML = `
+                            ${t.img ? `<img class="kn-img" src="${(t.img || '').replace(/"/g, '&quot;')}" loading="lazy">` : ''}
                             <span class="kn-sec">📂 ${seccion}</span>
                             ${tituloHtml}
                             ${est.key === 'hecha' && t.fechaHecha ? `<span class="kn-fecha">📅 ${fechaCorta(t.fechaHecha)}</span>` : ''}
