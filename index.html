@@ -94,7 +94,7 @@
         .card.drag-over { outline: 2px dashed var(--a); outline-offset: 2px; }
         .seccion-drop.drag-over { outline: 2px dashed #0984e3; outline-offset: 3px; background: rgba(9,132,227,0.12); }
 
-        /* Tarjetas del panel editorial */
+        /* Tarjetas del panel editorial (compat) */
         .card-editorial { padding-top: 4px; }
         .card-editorial.hecha { opacity: 0.6; }
         .card-editorial.hecha .card-title { text-decoration: line-through; }
@@ -107,6 +107,22 @@
         .ed-btn-del { background: #ffeaea; border-color: #ffd0d0; }
         .ed-sel { flex: 1; margin: 0; padding: 5px; font-size: 11px; min-width: 60px; }
         .ed-fecha { font-size: 10px; color: #1e7e34; font-weight: 600; white-space: nowrap; }
+
+        /* Tablero Kanban (Gestión) */
+        .kanban { grid-column: 1 / -1; display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 10px; }
+        .kanban-col { flex: 1; min-width: 270px; background: #eef0f3; border-radius: 10px; padding: 10px; }
+        .kanban-col h4 { margin: 2px 4px 10px; font-size: 13px; color: #444; display: flex; justify-content: space-between; align-items: center; }
+        .kanban-col h4 .cnt { background: rgba(0,0,0,0.08); border-radius: 10px; padding: 1px 8px; font-size: 11px; }
+        .kanban-lista { display: flex; flex-direction: column; gap: 10px; min-height: 50px; border-radius: 8px; transition: 0.15s; }
+        .kanban-lista.drag-over { outline: 2px dashed #0984e3; background: rgba(9,132,227,0.08); }
+        .kanban-card { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: grab; border: 1px solid #eee; }
+        .kanban-card.dragging { opacity: 0.4; }
+        .kanban-card .kn-titulo { font-size: 0.85rem; font-weight: 700; color: #1a1a1a; margin: 0 0 8px; line-height: 1.3; }
+        .kanban-card .kn-titulo a { color: inherit; text-decoration: none; }
+        .kn-sec { display: inline-block; font-size: 10px; font-weight: 700; background: #e8e2ec; color: var(--p); padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+        .kn-foot { display: flex; gap: 4px; align-items: center; margin-top: 6px; }
+        .kn-foot select { flex: 1; margin: 0; padding: 4px; font-size: 11px; min-width: 50px; }
+        .kn-fecha { font-size: 10px; color: #1e7e34; font-weight: 600; white-space: nowrap; margin-top: 4px; display: block; }
 
         /* Vista lista (apartado Subir) */
         .sub-toggle { display: inline-flex; gap: 0; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; margin-left: 8px; vertical-align: middle; }
@@ -564,7 +580,6 @@
             if (!pass || !t || !u) return alert("Por favor, rellena la clave, el tema y la URL.");
             btn.innerText = "Verificando...";
 
-            // 1) Intentamos como RSS (su fallo NO impide probar el sitemap)
             try {
                 const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
                 const data = await res.json();
@@ -577,7 +592,6 @@
                 }
             } catch(e) { /* no es RSS válido, probamos sitemap */ }
 
-            // 2) Probamos como sitemap de noticias
             btn.innerText = "Probando sitemap...";
             try {
                 const items = await fetchSitemap(u);
@@ -653,7 +667,6 @@
         };
 
         window.borrarMedio = async (id) => {
-            // Usa la clave del panel Admin si está escrita; si no, la pide por diálogo
             let pass = document.getElementById('admin-pass').value.trim();
             if (!pass) pass = (prompt("Escribe la clave maestra para borrar este medio:") || '').trim();
             if (!pass) return;
@@ -669,7 +682,6 @@
             return seccionesDisponibles()[0] || 'General';
         }
 
-        // Crear tarea editorial desde cero (formulario Admin)
         window.crearTareaEditorial = async () => {
             const titulo = document.getElementById('in-ed-titulo').value.trim();
             const seccion = document.getElementById('in-ed-seccion').value;
@@ -678,7 +690,7 @@
             try {
                 await addDoc(editorialRef, {
                     titulo, seccion: seccion || 'General', link, img: '',
-                    estado: 'por_realizar', origen: 'manual', fecha: Date.now()
+                    estado: 'pendiente', origen: 'manual', fecha: Date.now()
                 });
                 document.getElementById('in-ed-titulo').value = '';
                 document.getElementById('in-ed-link').value = '';
@@ -688,7 +700,6 @@
             }
         };
 
-        // Marcar una noticia (de cualquier vista) para producirla
         window.enviarEditorial = async (link, titulo, medio, img) => {
             const l = (link || '').replace(/%27/g, "'");
             if (editorial.some(e => e.link && e.link === l)) {
@@ -697,27 +708,53 @@
             try {
                 await addDoc(editorialRef, {
                     titulo, seccion: seccionPorMedio(medio), link: l, img: img || '',
-                    estado: 'por_realizar', origen: 'marcada', fecha: Date.now()
+                    estado: 'pendiente', origen: 'marcada', fecha: Date.now()
                 });
-                alert("📋 Enviada al panel de gestión (Por realizar).");
+                alert("📋 Enviada al panel de gestión (Pendiente).");
             } catch(e) {
                 alert("No se pudo enviar al panel. Revisa las reglas de Firestore para la colección editorial.\n\n(" + e.message + ")");
             }
         };
 
-        window.toggleEstadoEditorial = async (id) => {
+        // Estados del tablero kanban
+        const ESTADOS = [
+            { key: 'pendiente',  label: '📥 Pendiente' },
+            { key: 'en_proceso', label: '⏳ En proceso' },
+            { key: 'hecha',      label: '✅ Hecho' },
+        ];
+        // Normaliza el estado guardado (compatibilidad con 'por_realizar' antiguo)
+        function estadoNorm(t) {
+            if (!t.estado || t.estado === 'por_realizar') return 'pendiente';
+            return t.estado;
+        }
+
+        window.cambiarEstadoEditorial = async (id, estado) => {
             const t = editorial.find(e => e._id === id);
-            if (!t) return;
-            const pasaAHecha = t.estado !== 'hecha';
+            if (!t || estadoNorm(t) === estado) return;
             try {
                 await updateDoc(doc(db, "editorial", id), {
-                    estado: pasaAHecha ? 'hecha' : 'por_realizar',
-                    fechaHecha: pasaAHecha ? Date.now() : null
+                    estado,
+                    fechaHecha: estado === 'hecha' ? Date.now() : null
                 });
             } catch(e) {
                 alert("No se pudo actualizar la tarea. Revisa que las reglas de Firestore permitan el campo 'fechaHecha' en la colección editorial.\n\n(" + e.message + ")");
             }
         };
+
+        // Convierte una columna en zona donde soltar tarjetas (cambia su estado)
+        function activarColumnaEstado(el, estado) {
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                el.classList.add('drag-over');
+            });
+            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+            el.addEventListener('drop', e => {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                if (dragEditorialId) window.cambiarEstadoEditorial(dragEditorialId, estado);
+            });
+        }
 
         function fechaCorta(ts) {
             if (!ts) return '';
@@ -732,16 +769,6 @@
                 alert("No se pudo cambiar la sección.\n\n(" + e.message + ")");
             }
         };
-
-        async function moverEditorialSeccion(id, seccion) {
-            const t = editorial.find(e => e._id === id);
-            if (!t || t.seccion === seccion) return;
-            try {
-                await updateDoc(doc(db, "editorial", id), { seccion });
-            } catch(e) {
-                alert("No se pudo mover la tarea.\n\n(" + e.message + ")");
-            }
-        }
 
         window.borrarEditorial = async (id) => {
             await deleteDoc(doc(db, "editorial", id));
@@ -769,7 +796,6 @@
             return filas;
         }
 
-        // Convierte filas (array de arrays) en lista de {titulo, url}
         function filasATitulares(filas) {
             if (!filas || filas.length === 0) return [];
             const head = filas[0].map(h => (h == null ? '' : h).toString().toLowerCase());
@@ -815,7 +841,6 @@
 
         window.cambiarVistaSubir = (modo) => { vistaSubir = modo; cargar(); };
 
-        // Busca imagen de una URL (al enviar a Leídas o Gestión)
         async function obtenerImagen(url) {
             if (!url) return '';
             try {
@@ -840,14 +865,12 @@
             await window.enviarEditorial(it.url, it.titulo, nombreDesdeUrl(it.url), img);
         };
 
-        // Tema actual de una noticia leída (override manual o el del medio)
         function temaDeLeida(it) {
             if (it.temaOverride) return it.temaOverride;
             const fuente = fuentes.find(f => f.n === it.medio);
             return fuente ? (fuente.t || 'Otros') : 'Otros';
         }
 
-        // Guarda en la nube el nuevo tema al arrastrar una noticia
         async function moverLeidaTema(id, nuevoTema) {
             const it = leidas.find(l => l._id === id);
             if (!it || temaDeLeida(it) === nuevoTema) return;
@@ -856,7 +879,6 @@
             } catch(e) { alert("No se pudo mover la noticia."); }
         }
 
-        // Convierte un elemento en zona donde soltar noticias del tema indicado
         function activarZonaTema(el, tema) {
             el.addEventListener('dragover', e => {
                 e.preventDefault();
@@ -868,21 +890,6 @@
                 e.preventDefault();
                 el.classList.remove('drag-over');
                 if (dragLeidaId) moverLeidaTema(dragLeidaId, tema);
-            });
-        }
-
-        // Zona donde soltar tareas editoriales para cambiarlas de sección web
-        function activarZonaSeccion(el, seccion) {
-            el.addEventListener('dragover', e => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                el.classList.add('drag-over');
-            });
-            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
-            el.addEventListener('drop', e => {
-                e.preventDefault();
-                el.classList.remove('drag-over');
-                if (dragEditorialId) moverEditorialSeccion(dragEditorialId, seccion);
             });
         }
 
@@ -987,60 +994,49 @@
                     g.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">No hay tareas. Marca noticias con 📋 o crea una desde el panel Admin.</p>';
                     return;
                 }
-                const secMap = {};
-                for (const it of filtradas) {
-                    const s = it.seccion || 'General';
-                    if (!secMap[s]) secMap[s] = [];
-                    secMap[s].push(it);
-                }
                 const secciones = seccionesDisponibles();
-                Object.keys(secMap).forEach(s => { if (!secciones.includes(s)) secciones.push(s); });
-                const opts = secciones.map(s => `<option value="${s}">${s}</option>`).join('');
+                filtradas.forEach(t => { if (t.seccion && !secciones.includes(t.seccion)) secciones.push(t.seccion); });
+                const optsSec = secciones.map(s => `<option value="${s}">${s}</option>`).join('');
+                const optsEst = ESTADOS.map(e => `<option value="${e.key}">${e.label}</option>`).join('');
 
-                secciones.forEach(seccion => {
-                    const tareas = secMap[seccion] || [];
-                    if (busqueda && tareas.length === 0) return;
-                    const pend = tareas.filter(t => t.estado !== 'hecha').length;
-                    const hechas = tareas.length - pend;
+                const board = document.createElement('div');
+                board.className = 'kanban';
+                g.appendChild(board);
 
-                    const wrap = document.createElement('div');
-                    wrap.style.display = 'contents';
-                    g.appendChild(wrap);
+                ESTADOS.forEach(est => {
+                    const tareas = filtradas.filter(t => estadoNorm(t) === est.key);
 
-                    const header = document.createElement('div');
-                    header.className = 'header-medio seccion-drop';
-                    header.style.gridColumn = '1 / -1';
-                    header.innerHTML = `<span>📂 ${seccion}</span>` +
-                        `<small style="font-weight:normal;color:#888;font-size:12px;">${pend} por realizar · ${hechas} hechas</small>`;
-                    wrap.appendChild(header);
-                    activarZonaSeccion(header, seccion);
+                    const columna = document.createElement('div');
+                    columna.className = 'kanban-col';
+                    columna.innerHTML = `<h4>${est.label} <span class="cnt">${tareas.length}</span></h4>`;
 
-                    const ordenadas = [...tareas].sort((a, b) =>
-                        (a.estado === 'hecha' ? 1 : 0) - (b.estado === 'hecha' ? 1 : 0));
+                    const lista = document.createElement('div');
+                    lista.className = 'kanban-lista';
+                    activarColumnaEstado(lista, est.key);
+                    columna.appendChild(lista);
+                    board.appendChild(columna);
 
-                    ordenadas.forEach(t => {
-                        const hecha = t.estado === 'hecha';
+                    tareas.forEach(t => {
                         const tit = (t.titulo || '').replace(/</g, '&lt;');
+                        const seccion = t.seccion || 'General';
                         const card = document.createElement('div');
-                        card.className = 'card card-editorial' + (hecha ? ' hecha' : '');
+                        card.className = 'kanban-card';
                         card.setAttribute('draggable', 'true');
                         card.dataset.edId = t._id;
-                        const enlace = t.link
-                            ? `<a href="${t.link}" target="_blank" style="text-decoration:none;color:inherit;">
-                                   ${t.img ? `<img src="${t.img}" loading="lazy">` : ''}
-                                   <div class="card-body"><p class="card-title">${tit}</p></div>
-                               </a>`
-                            : `<div class="card-body"><p class="card-title">${tit}</p></div>`;
+                        const tituloHtml = t.link
+                            ? `<p class="kn-titulo"><a href="${t.link}" target="_blank">${tit}</a></p>`
+                            : `<p class="kn-titulo">${tit}</p>`;
                         card.innerHTML = `
-                            <span class="estado-badge ${hecha ? 'badge-hecha' : 'badge-pend'}">${hecha ? '✓ Hecha' : '● Por realizar'}</span>
-                            ${enlace}
-                            <div class="ed-acciones">
-                                <button class="ed-btn ${hecha ? '' : 'ed-btn-ok'}" onclick="window.toggleEstadoEditorial('${t._id}')">${hecha ? '↩️ Reabrir' : '✓ Hecha'}</button>
-                                ${hecha && t.fechaHecha ? `<span class="ed-fecha" title="Fecha de realización">📅 ${fechaCorta(t.fechaHecha)}</span>` : ''}
-                                <select class="ed-sel" onchange="window.cambiarSeccionEditorial('${t._id}', this.value)">${opts}</select>
+                            <span class="kn-sec">📂 ${seccion}</span>
+                            ${tituloHtml}
+                            ${est.key === 'hecha' && t.fechaHecha ? `<span class="kn-fecha">📅 ${fechaCorta(t.fechaHecha)}</span>` : ''}
+                            <div class="kn-foot">
+                                <select class="kn-est" onchange="window.cambiarEstadoEditorial('${t._id}', this.value)">${optsEst}</select>
+                                <select class="kn-sec-sel" onchange="window.cambiarSeccionEditorial('${t._id}', this.value)">${optsSec}</select>
                                 <button class="ed-btn ed-btn-del" onclick="window.borrarEditorial('${t._id}')">🗑️</button>
                             </div>`;
-                        card.querySelector('.ed-sel').value = seccion;
+                        card.querySelector('.kn-est').value = est.key;
+                        card.querySelector('.kn-sec-sel').value = seccion;
                         card.addEventListener('dragstart', e => {
                             dragEditorialId = t._id;
                             card.classList.add('dragging');
@@ -1051,8 +1047,7 @@
                             card.classList.remove('dragging');
                             document.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
                         });
-                        activarZonaSeccion(card, seccion);
-                        wrap.appendChild(card);
+                        lista.appendChild(card);
                     });
                 });
                 return;
@@ -1123,7 +1118,6 @@
                           vista === 'TEMA' ? ord.filter(f => f.t === filtroVal) :
                           ord.filter(f => f.u === filtroVal);
 
-            // Artículos manuales (siempre al principio en ALL)
             if (vista === 'ALL' || vista === 'TEMA') {
                 const artFiltrados = articulosManuales
                     .filter(a => !leidas.some(l => l.link === a.url))
@@ -1199,7 +1193,8 @@
             const btnEd = `<button class="btn-accion" title="Enviar al panel de gestión" onclick="event.stopPropagation(); window.enviarEditorial('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">📋</button>`;
             let boton;
             if (esArchivo) {
-                boton = `<button class="btn-accion" style="right:40px;" onclick="window.restaurar('${linkSeg}')">↩️</button>` + btnEd;
+                boton = `<button class="btn-accion" style="right:72px;" title="Quitar de leídas" onclick="window.restaurar('${linkSeg}')">↩️</button>
+                         <button class="btn-accion" style="right:40px;" title="Enviar a la papelera" onclick="window.papeleraLeida('${linkSeg}')">🗑️</button>` + btnEd;
             } else if (esManual) {
                 boton = `<button class="btn-accion" style="right:72px;" onclick="window.archivar('${linkSeg}','${tSeguro}','${medioSeg}','${imgSeg}')">👁️</button>
                          <button class="btn-accion" style="right:40px;" onclick="window.borrarArticulo('${artId}')">🗑️</button>` + btnEd;
@@ -1229,6 +1224,19 @@
         window.restaurar = async (link) => {
             const found = leidas.find(l => l.link === link);
             if (found?._id) await deleteDoc(doc(db, "leidas", found._id));
+        };
+
+        // Enviar una noticia leída a la papelera
+        window.papeleraLeida = async (linkSeg) => {
+            const link = (linkSeg || '').replace(/%27/g, "'");
+            const it = leidas.find(l => l.link === link);
+            if (!it) return;
+            try {
+                await addDoc(papeleraRef, {
+                    url: it.link, titulo: it.titulo || '', img: it.img || '', fechaEliminado: Date.now()
+                });
+                if (it._id) await deleteDoc(doc(db, "leidas", it._id));
+            } catch(e) { alert("No se pudo enviar a la papelera."); }
         };
     </script>
 </body>
