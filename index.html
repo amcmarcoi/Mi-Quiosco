@@ -224,9 +224,10 @@
         <p style="font-size:12px;color:#777;margin:0 0 16px;line-height:1.4;">Desde aquí gestionas tus fuentes, temas y contenidos. Los cambios se guardan en la nube y se sincronizan en todos tus dispositivos.</p>
         <div class="seccion">
             <h3>1 · Añadir Fuente (RSS / Sitemap)</h3>
-            <p class="ayuda-mini">Añade un periódico por su URL de RSS o sitemap. Sus noticias aparecerán en Principal agrupadas por el tema que indiques.</p>
+            <p class="ayuda-mini">Añade un periódico por su URL de RSS o sitemap. Elige un tema existente del desplegable o escribe uno nuevo.</p>
             <input type="password" id="admin-pass" placeholder="Clave Maestra">
-            <input type="text" id="in-tema" placeholder="Tema (ej: Deportes)">
+            <select id="in-tema-sel" onchange="window.usarTemaExistente(this.value)"></select>
+            <input type="text" id="in-tema" placeholder="Tema (elige arriba o escribe uno nuevo)">
             <input type="url" id="in-url" placeholder="URL RSS o Sitemap del periódico">
             <button class="btn-add" id="btn-save" onclick="window.añadirMedio()">+ Guardar en la Nube</button>
         </div>
@@ -438,8 +439,12 @@
             return secciones;
         }
 
-        window.crearTema = async () => {
-            const inp = document.getElementById('in-nuevo-tema');
+        // Al elegir un tema del desplegable, se copia al campo de texto
+        window.usarTemaExistente = (v) => {
+            if (v) document.getElementById('in-tema').value = v;
+        };
+
+        window.crearTema = async () => {            const inp = document.getElementById('in-nuevo-tema');
             const t = inp.value.trim();
             if (!t) return;
             if (temasManuales.includes(t)) return alert("Ese tema ya existe.");
@@ -527,6 +532,11 @@
                 const prev = sel.value;
                 sel.innerHTML = seccionesDisponibles().map(s => `<option value="${s}">${s}</option>`).join('');
                 if (prev) sel.value = prev;
+            }
+            const selT = document.getElementById('in-tema-sel');
+            if (selT) {
+                selT.innerHTML = '<option value="">— Elegir tema existente —</option>' +
+                    temas.map(t => `<option value="${t}">${t}</option>`).join('');
             }
             actualizarMenusActivo();
             renderListaOrden();
