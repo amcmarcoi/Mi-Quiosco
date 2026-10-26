@@ -624,6 +624,51 @@
             return parseSitemap(txt);
         }
 
+        // Parsea un feed RSS 2.0 o Atom y devuelve {title, link, img}
+        function parseRSS(xmlText) {
+            const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+            let nodos = [...xml.getElementsByTagName('item')];
+            if (nodos.length === 0) nodos = [...xml.getElementsByTagName('entry')];
+            return nodos.map(n => {
+                const get = tag => n.getElementsByTagName(tag)[0]?.textContent?.trim() || '';
+                const title = get('title');
+                // Enlace: RSS usa <link>texto; Atom usa <link href="...">
+                let link = '';
+                const links = [...n.getElementsByTagName('link')];
+                for (const l of links) {
+                    const href = l.getAttribute('href');
+                    if (href) { if (!link || l.getAttribute('rel') === 'alternate') link = href; }
+                    else if (l.textContent && l.textContent.trim()) link = l.textContent.trim();
+                }
+                // Imagen: media:content / media:thumbnail / enclosure / primera <img> del contenido
+                let img = '';
+                for (const el of n.getElementsByTagName('*')) {
+                    const ln = el.localName;
+                    if ((ln === 'content' || ln === 'thumbnail') && el.getAttribute('url')) { img = el.getAttribute('url'); break; }
+                    if (ln === 'enclosure' && (el.getAttribute('type') || '').startsWith('image') && el.getAttribute('url')) { img = el.getAttribute('url'); break; }
+                    if (ln === 'enclosure' && el.getAttribute('url') && !img) img = el.getAttribute('url');
+                }
+                if (!img) {
+                    const cuerpo = get('encoded') || get('description') || get('summary') || get('content');
+                    const m = cuerpo && cuerpo.match(/<img[^>]+src=["']([^"']+)["']/i);
+                    if (m) img = m[1];
+                }
+                return { title: title || link, link, img };
+            }).filter(x => x.link);
+        }
+
+        async function fetchRSS(u) {
+            const txt = await fetchConProxy(u);
+            return parseRSS(txt);
+        }
+
+        // Título del canal/feed (para nombrar el medio al añadirlo)
+        function tituloFeed(xmlText) {
+            const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+            const t = xml.querySelector('channel > title, feed > title');
+            return t ? t.textContent.trim() : '';
+        }
+
         window.añadirMedio = async () => {
             const pass = document.getElementById('admin-pass').value.trim();
             const t = document.getElementById('in-tema').value.trim();
@@ -633,14 +678,15 @@
             if (!pass || !t || !u) return alert("Por favor, rellena la clave, el tema y la URL.");
             btn.innerText = "Verificando...";
 
+            // 1) Intentamos como RSS/Atom (leyendo el XML por proxy, sin rss2json)
             try {
-                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(u)}`);
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    await addDoc(colRef, { n: data.feed.title, t, u, pass, tipo: 'rss', fecha: Date.now() });
+                const xml = await fetchConProxy(u);
+                const items = parseRSS(xml);
+                if (items.length > 0) {
+                    await addDoc(colRef, { n: tituloFeed(xml) || nombreDesdeUrl(u), t, u, pass, tipo: 'rss', fecha: Date.now() });
                     document.getElementById('in-url').value = '';
                     btn.innerText = "+ Guardar en la Nube";
-                    alert("✅ ¡Éxito! Medio RSS añadido.");
+                    alert(`✅ ¡Éxito! Medio RSS añadido (${items.length} noticias).`);
                     return;
                 }
             } catch(e) { /* no es RSS válido, probamos sitemap */ }
@@ -1234,19 +1280,15 @@
                         });
                         return;
                     }
-                    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
-                    const data = await res.json();
+                    const todos = await fetchRSS(f.u);
                     if (miToken !== cargaToken) return;
-                    if (data.status === 'ok') {
-                        const items = data.items
-                            .filter(it => !leidas.some(l => l.link === it.link))
-                            .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
-                            .slice(0, 10);
-                        items.forEach(it => {
-                            const img = it.thumbnail || (it.enclosure ? it.enclosure.link : '');
-                            secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img }, false));
-                        });
-                    }
+                    const items = todos
+                        .filter(it => !leidas.some(l => l.link === it.link))
+                        .filter(it => !busqueda || (it.title || '').toLowerCase().includes(busqueda))
+                        .slice(0, 10);
+                    items.forEach(it => {
+                        secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img: it.img }, false));
+                    });
                 } catch(e) {}
             }));
         }
