@@ -300,6 +300,18 @@
         let importados = [];
         let vistaSubir = 'tarjetas';
         let temasManuales = [];
+        let feedsCache = {};      // { urlFuente: [ {titulo, link, img}, ... ] }
+
+        // Carga el feeds.json generado por GitHub Actions (mismo dominio, sin CORS ni proxies)
+        fetch('feeds.json?t=' + Date.now())
+            .then(r => r.ok ? r.json() : null)
+            .then(j => {
+                if (j && Array.isArray(j.medios)) {
+                    j.medios.forEach(m => { feedsCache[m.u] = m.items || []; });
+                    cargar();
+                }
+            })
+            .catch(() => {});
 
         function fuentesOrdenadas() {
             if (ordenIds.length === 0) return fuentes;
@@ -1277,18 +1289,19 @@
                 secciones[f.id] = sec;
             });
 
-            // Descarga SECUENCIAL: los proxies CORS limitan las peticiones simultáneas,
-            // así que pedimos una fuente cada vez para que carguen todas.
+            // Usamos el feeds.json (rápido y fiable); si un medio no está ahí, descarga en vivo por proxy.
             for (const f of activas) {
                 try {
-                    const todos = f.tipo === 'sitemap' ? await fetchSitemap(f.u) : await fetchRSS(f.u);
+                    let todos = feedsCache[f.u];
+                    if (!todos) todos = (f.tipo === 'sitemap') ? await fetchSitemap(f.u) : await fetchRSS(f.u);
                     if (miToken !== cargaToken) return;
                     const items = todos
+                        .map(it => ({ titulo: it.titulo || it.title || it.link, link: it.link, img: it.img }))
                         .filter(it => !leidas.some(l => l.link === it.link))
-                        .filter(it => !busqueda || (it.title || '').toLowerCase().includes(busqueda))
+                        .filter(it => !busqueda || (it.titulo || '').toLowerCase().includes(busqueda))
                         .slice(0, 10);
                     items.forEach(it => {
-                        secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img: it.img }, false));
+                        secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.titulo, link: it.link, medio: f.n, img: it.img }, false));
                     });
                 } catch(e) {
                     if (miToken !== cargaToken) return;
