@@ -609,12 +609,16 @@
             let ultimoError = null;
             for (const proxy of CORS_PROXIES) {
                 try {
-                    const res = await fetch(proxy(u));
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), 12000);
+                    let res;
+                    try { res = await fetch(proxy(u), { signal: ctrl.signal }); }
+                    finally { clearTimeout(timer); }
                     if (!res.ok) { ultimoError = `HTTP ${res.status}`; continue; }
                     const txt = await res.text();
                     if (txt && txt.length > 50) return txt;
                     ultimoError = 'respuesta vacía';
-                } catch(e) { ultimoError = e.message; }
+                } catch(e) { ultimoError = e.name === 'AbortError' ? 'tiempo agotado' : e.message; }
             }
             throw new Error(ultimoError || 'todos los proxies fallaron');
         }
@@ -1266,21 +1270,11 @@
                 secciones[f.id] = sec;
             });
 
-            await Promise.all(activas.map(async f => {
+            // Descarga SECUENCIAL: los proxies CORS limitan las peticiones simultáneas,
+            // así que pedimos una fuente cada vez para que carguen todas.
+            for (const f of activas) {
                 try {
-                    if (f.tipo === 'sitemap') {
-                        const todos = await fetchSitemap(f.u);
-                        if (miToken !== cargaToken) return;
-                        const items = todos
-                            .filter(it => !leidas.some(l => l.link === it.link))
-                            .filter(it => !busqueda || it.title.toLowerCase().includes(busqueda))
-                            .slice(0, 10);
-                        items.forEach(it => {
-                            secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img: it.img }, false));
-                        });
-                        return;
-                    }
-                    const todos = await fetchRSS(f.u);
+                    const todos = f.tipo === 'sitemap' ? await fetchSitemap(f.u) : await fetchRSS(f.u);
                     if (miToken !== cargaToken) return;
                     const items = todos
                         .filter(it => !leidas.some(l => l.link === it.link))
@@ -1289,8 +1283,11 @@
                     items.forEach(it => {
                         secciones[f.id].insertAdjacentHTML('beforeend', renderCard({ titulo: it.title, link: it.link, medio: f.n, img: it.img }, false));
                     });
-                } catch(e) {}
-            }));
+                } catch(e) {
+                    if (miToken !== cargaToken) return;
+                    secciones[f.id].insertAdjacentHTML('beforeend', `<p style="grid-column:1/-1;font-size:12px;color:#c0392b;padding:4px 12px;">No se pudieron cargar las noticias de ${f.n} (${e.message}).</p>`);
+                }
+            }
         }
 
         function renderCard(it, esArchivo, esManual = false) {
