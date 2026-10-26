@@ -600,10 +600,16 @@
 
         // Lista de proxies CORS de respaldo (se prueban en orden)
         const CORS_PROXIES = [
-            u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
             u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+            u => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+            u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
             u => `https://thingproxy.freeboard.io/fetch/${u}`,
         ];
+
+        // ¿El texto descargado parece realmente un feed/sitemap XML?
+        function pareceXML(txt) {
+            return /<\?xml|<rss|<feed|<item[\s>]|<entry[\s>]|<urlset|<sitemapindex|<channel/i.test(txt);
+        }
 
         async function fetchConProxy(u) {
             let ultimoError = null;
@@ -616,8 +622,9 @@
                     finally { clearTimeout(timer); }
                     if (!res.ok) { ultimoError = `HTTP ${res.status}`; continue; }
                     const txt = await res.text();
-                    if (txt && txt.length > 50) return txt;
-                    ultimoError = 'respuesta vacía';
+                    if (!txt || txt.length < 50) { ultimoError = 'respuesta vacía'; continue; }
+                    if (!pareceXML(txt)) { ultimoError = 'respuesta no válida (el proxy devolvió algo que no es un feed)'; continue; }
+                    return txt;
                 } catch(e) { ultimoError = e.name === 'AbortError' ? 'tiempo agotado' : e.message; }
             }
             throw new Error(ultimoError || 'todos los proxies fallaron');
